@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "ICS to GCal",
+  "short_name": "ICS2GCal",
+  "version": "0.1",
+
+  "description": "Import .ics files into Google Calendar with just two clicks",
+
+  "author": "Fabian Henneke",
+  "background": {
+    "persistent": false,
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "identity",
+    "contextMenus"
+  ]
+}
