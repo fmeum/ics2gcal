@@ -3,8 +3,6 @@
   const LINK_MENU_ID = "ics2gcal.contextmenu.link";
   const LINK_MENU_SEPARATOR_ID = "ics2gcal.contextmenu.separator";
   const LINK_MENU_CALENDAR_ID_PREFIX = "ics2gcal.contextmenu.link.calendar/";
-  const GAPI_CALENDAR_LIST_COMMAND =
-    "https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=";
 
   function handleStatus(response) {
     if (response.status >= 200 && response.status < 300) {
@@ -124,7 +122,7 @@
         return;
       }
 
-      fetch(GAPI_CALENDAR_LIST_COMMAND + token, {
+      fetch(`https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`, {
         method: "GET"
       })
         .then(handleStatus)
