@@ -16,8 +16,9 @@
   "permissions": [
     "identity",
     "contextMenus",
-    "https://www.googleapis.com/*"
-
+    "https://www.googleapis.com/*",
+    "https://*/",
+    "http://*/"
   ],
   "oauth2":   {
     "client_id": "205438406793-rren6k6no1q4vgkvebg9kbft8o4srjvm.apps.googleusercontent.com",
