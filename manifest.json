@@ -10,7 +10,8 @@
   "background": {
     "persistent": false,
     "scripts": [
-      "background.js"
+      "background.js",
+      "ical.min.js"
     ]
   },
   "permissions": [

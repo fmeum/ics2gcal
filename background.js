@@ -22,11 +22,19 @@
     fetch(ics_link)
       .then(handleStatus)
       .then(response => response.text())
-      .then(alert)
       .catch(function (error) {
         alert("Request to fetch .ics failed: " + error);
+      })
+      .then(ICAL.parse)
+      .catch(function (error) {
+        alert("The .ics file is invalid: " + error);
+      })
+      .then(function (jcalData) {
+        const vevents = new ICAL.Component(jcalData).getAllSubcomponents();
+        for (let vevent of vevents) {
+          createEvent(new ICAL.Event(vevent), calendar_id);
+        }
       });
-    createEvent(null, calendar_id);
   }
 
   function removeContextMenu() {
@@ -84,6 +92,8 @@
   }
 
   function createEvent(event, calendar_id) {
+    console.log(calendar_id);
+    console.log(event);
     chrome.identity.getAuthToken({"interactive": false}, function(token) {
       if (chrome.runtime.lastError) {
         alert(chrome.runtime.lastError.message);
