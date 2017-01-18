@@ -15,8 +15,9 @@
     ]
   },
   "permissions": [
-    "identity",
     "contextMenus",
+    "identity",
+    "tabs",
     "https://www.googleapis.com/*",
     "https://*/",
     "http://*/"

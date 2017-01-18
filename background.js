@@ -92,36 +92,40 @@
   }
 
   function createEvent(event, calendar_id) {
-    console.log(calendar_id);
-    console.log(event);
-    chrome.identity.getAuthToken({"interactive": false}, function(token) {
-      if (chrome.runtime.lastError) {
-        alert(chrome.runtime.lastError.message);
-        return;
-      }
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      let tab_url = tabs[0].url;
+      let gcal_event = {
+        'summary': event.summary,
+        'location': event.location,
+        'description': `Source: ${tab_url}`,
+        'start': {
+          'dateTime': event.startDate.toString(),
+          'timeZone': event.startDate.zone.toString()
+        },
+        'end': {
+          'dateTime': event.endDate.toString(),
+          'timeZone': event.endDate.zone.toString()
+        },
+        'reminders': {
+          'useDefault': true
+        }
+      };
+      console.log(JSON.stringify(gcal_event));
+      chrome.identity.getAuthToken({"interactive": false}, function(token) {
+        if (chrome.runtime.lastError) {
+          alert(chrome.runtime.lastError.message);
+          return;
+        }
 
-      fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendar_id}/events`, {
-        method: "POST",
-        headers: new Headers({
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }),
-        body: JSON.stringify({
-          'summary': 'Google I/O 2015',
-          'location': '800 Howard St., San Francisco, CA 94103',
-          'description': 'A chance to hear more about Google\'s developer products.',
-          'start': {
-            'dateTime': '2017-01-28T09:00:00-07:00',
-            'timeZone': 'America/Los_Angeles'
-          },
-          'end': {
-            'dateTime': '2017-01-28T17:00:00-07:00',
-            'timeZone': 'America/Los_Angeles'
-          },
-          'reminders': {
-            'useDefault': false
-          }})
-      });
+        fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendar_id}/events`, {
+          method: "POST",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+          body: JSON.stringify(gcal_event)
+        });
+    });
     });
   }
 
