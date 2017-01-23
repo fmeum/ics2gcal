@@ -2,11 +2,12 @@
   "manifest_version": 2,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.1",
+  "version": "0.1.1",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
 
   "author": "Fabian Henneke",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgOOWm/6fFzxL5P6zwlMPfJD+W7qdzXBmW50TvqN3BrZH3/9wcoc6q2vqnhqGmIrl1T/lHlRsN1yt3jKXzyYFRwg+kcvWZPFcerRmTGKcFeFb2nMZ/2UzwrmojhE1IBnNohfqrmyFvGYnIR85dwePXrP+KKJI4kBzh9bdqpQmPOYhQGDSP6qOvl9Q6jqsWMXGI8pYAuMMmPidx0tu/mEJA82LSZoGUMP8i7sx40FM09ztM2oSLxpD9JSprV9YqJG5xXUk6O2bHBoGwoC65UEC/xkwgsTSaaCI0Te0FemIl/pblishPvPX1mwHPkLH8AXT1DcDVmMyEhXW8eZjjXAENQIDAQAB",
   "background": {
     "persistent": false,
     "scripts": [
@@ -17,10 +18,11 @@
   "permissions": [
     "contextMenus",
     "identity",
-    "tabs",
+    "activeTab",
     "https://www.googleapis.com/*",
-    "https://*/",
-    "http://*/"
+    "*://*/*.ics*",
+    "*://*/*.ICS*",
+    "*://*/*ics_view*"
   ],
   "oauth2":   {
     "client_id": "205438406793-rren6k6no1q4vgkvebg9kbft8o4srjvm.apps.googleusercontent.com",
