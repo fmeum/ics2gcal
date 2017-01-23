@@ -1,5 +1,8 @@
 (function() {
   "use strict";
+
+  const chromep = new ChromePromise();
+
   const LINK_MENU_ID = "ics2gcal.contextmenu.link";
   const LINK_MENU_SEPARATOR_ID = "ics2gcal.contextmenu.separator";
   const LINK_MENU_CALENDAR_ID_PREFIX = "ics2gcal.contextmenu.link.calendar/";
@@ -20,25 +23,25 @@
     }
   }
 
-  function linkMenuCalendar_onClick(info) {
+  async function linkMenuCalendar_onClick(info) {
     const icsLink = info.linkUrl;
     const calendarId = info.menuItemId.split("/")[1];
-    fetch(icsLink)
-      .then(handleStatus)
-      .then(response => response.text())
-      .catch(function (error) {
-        alert("Request to fetch .ics failed: " + error);
-      })
-      .then(ICAL.parse)
-      .catch(function (error) {
-        alert("The .ics file is invalid: " + error);
-      })
-      .then(function (jcalData) {
-        const vevents = new ICAL.Component(jcalData).getAllSubcomponents();
-        for (let vevent of vevents) {
-          createEvent(new ICAL.Event(vevent), calendarId);
-        }
-      });
+    let jcalData = '';
+    try {
+      let response = await fetch(icsLink).then(handleStatus);
+      let responseText = await response.text();
+      jcalData = ICAL.parse(responseText);
+    } catch(error) {
+      alert(`Request to fetch .ics failed:\n${error.stack}`);
+    }
+    try {
+      let vevents = new ICAL.Component(jcalData).getAllSubcomponents();
+      let eventIds = await Promise.all(vevents.map(
+        vevent => createEvent(new ICAL.Event(vevent), calendarId)));
+      alert(eventIds);
+    } catch(error) {
+      alert(`The .ics file is invalid:\n${error.stack}`);
+    }
   }
 
   function removeContextMenu() {
@@ -71,74 +74,72 @@
     }
   }
 
-  function createEvent(event, calendarId) {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      let tabUrl = tabs[0].url;
-      let gcalEvent = {
-        'summary': event.summary,
-        'location': event.location,
-        'description': `Source: ${tabUrl}`,
-        'start': {
-          'dateTime': event.startDate.toString(),
-          'timeZone': event.startDate.zone.toString()
-        },
-        'end': {
-          'dateTime': event.endDate.toString(),
-          'timeZone': event.endDate.zone.toString()
-        },
-        'reminders': {
-          'useDefault': true
-        }
-      };
-      console.log(JSON.stringify(gcalEvent));
-      chrome.identity.getAuthToken({"interactive": false}, function(token) {
-        if (chrome.runtime.lastError) {
-          alert(chrome.runtime.lastError.message);
-          return;
-        }
-
-        fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
+  async function createEvent(event, calendarId) {
+    let tabs = await chromep.tabs.query({active: true, currentWindow: true});
+    let tabUrl = tabs[0].url;
+    let gcalEvent = {
+      'summary': event.summary,
+      'location': event.location,
+      'description': `Source: ${tabUrl}`,
+      'start': {
+        'dateTime': event.startDate.toString(),
+        'timeZone': event.startDate.zone.toString()
+      },
+      'end': {
+        'dateTime': event.endDate.toString(),
+        'timeZone': event.endDate.zone.toString()
+      },
+      'reminders': {
+        'useDefault': true
+      }
+    };
+    console.log(JSON.stringify(gcalEvent));
+    try {
+      let token = await chromep.identity.getAuthToken({"interactive": false});
+      let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
+        {
           method: "POST",
           headers: new Headers({
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
           }),
           body: JSON.stringify(gcalEvent)
-        });
-      });
-    });
+        })
+        .then(handleStatus);
+      let responseEvent = await response.json();
+      return responseEvent.id;
+    } catch (error) {
+      alert(`Request 'events' failed:\n${error.stack}`);
+    }
   }
 
-  function fetchCalendars() {
-    chrome.identity.getAuthToken({"interactive": false}, function(token) {
-      if (chrome.runtime.lastError) {
-        alert(chrome.runtime.lastError.message);
-        return;
-      }
-
-      fetch(`https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`, {
-        method: "GET"
-      })
-        .then(handleStatus)
-        .then(response => response.json())
-        .then(function (response) {
-          let calendars = {};
-          let hiddenCalendars = {};
-          for (let item of response.items) {
-            // Only consider calendars in which we can create events
-            if (item.accessRole != "owner" && item.accessRole != "writer")
-              continue;
-            if (item.selected)
-              calendars[item.id] = item.summary;
-            else
-              hiddenCalendars[item.id] = item.summary;
-          }
-          installContextMenu(calendars, hiddenCalendars);
+  async function fetchCalendars() {
+    try {
+      let token = await chromep.identity.getAuthToken({"interactive": false});
+      let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`,
+        {
+          method: "GET"
         })
-        .catch(function (error) {
-          alert("Request 'calendarList' failed: " + error);
-        });
-    });
+        .then(handleStatus);
+      let responseCalendarList = await response.json();
+      let calendars = {};
+      let hiddenCalendars = {};
+      for (let item of responseCalendarList.items) {
+        // Only consider calendars in which we can create events
+        if (item.accessRole != "owner" && item.accessRole != "writer")
+          continue;
+        if (item.selected)
+          calendars[item.id] = item.summary;
+        else
+          hiddenCalendars[item.id] = item.summary;
+      }
+      installContextMenu(calendars, hiddenCalendars);
+    } catch (error) {
+      alert(`Request 'calendarList' failed:\n${error.stack}`);
+    }
+
   }
 
   chrome.runtime.onInstalled.addListener(fetchCalendars);

@@ -11,8 +11,9 @@
   "background": {
     "persistent": false,
     "scripts": [
-      "background.js",
-      "ical.min.js"
+      "ical.min.js",
+      "chrome-promise.js",
+      "background.js"
     ]
   },
   "permissions": [
