@@ -40,6 +40,7 @@
       let eventIds = await Promise.all(vevents.map(
         vevent => createEvent(new ICAL.Event(vevent), calendarId)));
       alert(eventIds);
+      chrome.tabs.executeScript(null, {file: "snackbar.js"});
     } catch(error) {
       alert(`The .ics file is invalid:\n${error.stack}`);
       return;
