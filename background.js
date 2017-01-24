@@ -33,6 +33,7 @@
       jcalData = ICAL.parse(responseText);
     } catch(error) {
       alert(`Request to fetch .ics failed:\n${error.stack}`);
+      return;
     }
     try {
       let vevents = new ICAL.Component(jcalData).getAllSubcomponents();
@@ -41,6 +42,7 @@
       alert(eventIds);
     } catch(error) {
       alert(`The .ics file is invalid:\n${error.stack}`);
+      return;
     }
   }
 
@@ -111,6 +113,7 @@
       return responseEvent.id;
     } catch (error) {
       alert(`Request 'events' failed:\n${error.stack}`);
+      return;
     }
   }
 
@@ -138,6 +141,7 @@
       installContextMenu(calendars, hiddenCalendars);
     } catch (error) {
       alert(`Request 'calendarList' failed:\n${error.stack}`);
+      return;
     }
 
   }
