@@ -1,5 +1,48 @@
-.snackbar {
+#snackbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  box-sizing: border-box;
   position: fixed;
-  bottom: 24px;
+  bottom: -48px;
   left: 24px;
+  height: 48px;
+  min-width: 288px;
+  max-width: 568px;
+  border-radius: 2px;
+  background-color: #323232;
+  padding: 14px 24px 14px 24px;
+  z-index: 2147483647;
+  transition: bottom 0.3s cubic-bezier(0.16, 0.84, 0.44, 1.0);
+}
+
+#snackbar>* {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#snackbar.show {
+  bottom: 24px;
+}
+
+#snackbar.show>* {
+  opacity: 1;
+}
+
+#snackbar>span {
+  margin: 0;
+  font-family: "Roboto", Sans-Serif;
+  font-size: 14px;
+  color: #FFFFFF;
+}
+
+#snackbar>a {
+  margin: 0 0 0 48px;
+  font-family: "Roboto", Sans-Serif;
+  /* TODO: switch to Roboto Medium */
+  font-size: 14px;
+  font-weight: 500;
+  color: #FF7043;
+  text-transform: uppercase;
+  text-decoration: none;
 }

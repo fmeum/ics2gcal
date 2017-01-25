@@ -35,16 +35,18 @@
       alert(`Request to fetch .ics failed:\n${error.stack}`);
       return;
     }
+    let eventIds = [];
     try {
       let vevents = new ICAL.Component(jcalData).getAllSubcomponents();
-      let eventIds = await Promise.all(vevents.map(
+      eventIds = await Promise.all(vevents.map(
         vevent => createEvent(new ICAL.Event(vevent), calendarId)));
-      alert(eventIds);
-      chrome.tabs.executeScript(null, {file: "snackbar.js"});
     } catch(error) {
       alert(`The .ics file is invalid:\n${error.stack}`);
       return;
     }
+    alert(eventIds);
+    chrome.tabs.insertCSS(null, {file: "snackbar.css"});
+    chrome.tabs.executeScript(null, {file: "snackbar.js"});
   }
 
   function removeContextMenu() {
