@@ -23,6 +23,20 @@
     }
   }
 
+  // Promisify setTimeout
+  function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function messageActiveTab(request, callback) {
+    let tabs = await chromep.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+    let activeTabId = tabs[0].id;
+    chrome.tabs.sendMessage(activeTabId, request, callback);
+  }
+
   async function linkMenuCalendar_onClick(info) {
     const icsLink = info.linkUrl;
     const calendarId = info.menuItemId.split("/")[1];
@@ -44,9 +58,35 @@
       alert(`The .ics file is invalid:\n${error.stack}`);
       return;
     }
-    alert(eventIds);
-    chrome.tabs.insertCSS(null, {file: "snackbar.css"});
-    chrome.tabs.executeScript(null, {file: "snackbar.js"});
+    chrome.tabs.insertCSS(null, {
+      file: "snackbar.css"
+    });
+    chrome.tabs.executeScript(null, {
+      file: "snackbar.js"
+    });
+    await timeout(2000);
+    console.log("Message tab: Event added");
+    await messageActiveTab({
+        "text": "Event addded",
+        "action_label": "View"
+      },
+      function(response) {
+        if (response.clicked) console.log(`View ${eventIds[0]}`);
+      });
+    await timeout(2000);
+    console.log("Message tab: Multiple events added");
+    await messageActiveTab({
+        "text": "Multiple events addded",
+        "action_label": "Undo"
+      },
+      function(response) {
+        if (response.clicked) console.log(`Undo ${eventIds[0]}`);
+      });
+    await timeout(11000);
+    console.log("Message tab: ICS file invalid");
+    await messageActiveTab({
+      "text": "ICS file invalid"
+    });
   }
 
   function removeContextMenu() {

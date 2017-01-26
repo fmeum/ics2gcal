@@ -1,4 +1,4 @@
-#snackbar {
+#ics2gcal-snackbar {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -16,27 +16,27 @@
   transition: bottom 0.3s cubic-bezier(0.16, 0.84, 0.44, 1.0);
 }
 
-#snackbar>* {
+#ics2gcal-snackbar>* {
   opacity: 0;
   transition: opacity 0.3s;
 }
 
-#snackbar.show {
+#ics2gcal-snackbar.show {
   bottom: 24px;
 }
 
-#snackbar.show>* {
+#ics2gcal-snackbar.show>* {
   opacity: 1;
 }
 
-#snackbar>span {
+#ics2gcal-snackbar>span {
   margin: 0;
   font-family: "Roboto", Sans-Serif;
   font-size: 14px;
   color: #FFFFFF;
 }
 
-#snackbar>a {
+#ics2gcal-snackbar>a {
   margin: 0 0 0 48px;
   font-family: "Roboto", Sans-Serif;
   /* TODO: switch to Roboto Medium */
