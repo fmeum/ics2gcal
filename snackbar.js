@@ -15,6 +15,7 @@
   if (!snackbar) {
     snackbar = document.createElement("div");
     snackbar.id = SNACKBAR_ID;
+    // TODO: Use button instead of a
     snackbar.innerHTML =
       `<span id="${SNACKBAR_TEXT_ID}"></span>
        <a href="javascript:void(0);" target="_blank" id="${SNACKBAR_ACTION_ID}"></a>`;
