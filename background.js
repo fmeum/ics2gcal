@@ -189,6 +189,8 @@
   }
 
   chrome.runtime.onInstalled.addListener(fetchCalendars);
-  chrome.runtime.onStartup.addListener(fetchCalendars);
-  chrome.contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
+  chrome.runtime.onStartup
+    .addListener(fetchCalendars);
+  chrome.contextMenus.onClicked.addListener(
+    linkMenuCalendar_onClick);
 })();
