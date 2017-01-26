@@ -53,10 +53,10 @@
       "id": LINK_MENU_ID,
       "title": "Add to calendar"
     }, LINK_MENU_CONTEXT));
-    for (let calendarId in calendars) {
+    for (let [calendarId, calendarTitle] of calendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
-        "title": calendars[calendarId],
+        "title": calendarTitle,
         "parentId": LINK_MENU_ID
       }, LINK_MENU_CONTEXT));
     }
@@ -65,10 +65,10 @@
       "type": "separator",
       "parentId": LINK_MENU_ID
     }, LINK_MENU_CONTEXT));
-    for (let calendarId in hiddenCalendars) {
+    for (let [calendarId, calendarTitle] of hiddenCalendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
-        "title": hiddenCalendars[calendarId],
+        "title": calendarTitle,
         "parentId": LINK_MENU_ID,
       }, LINK_MENU_CONTEXT));
     }
@@ -130,17 +130,19 @@
           })
         .then(handleStatus);
       let responseCalendarList = await response.json();
-      let calendars = {};
-      let hiddenCalendars = {};
+      let calendars = [];
+      let hiddenCalendars = [];
       for (let item of responseCalendarList.items) {
         // Only consider calendars in which we can create events
         if (item.accessRole != "owner" && item.accessRole != "writer")
           continue;
         if (item.selected)
-          calendars[item.id] = item.summary;
+          calendars.push([item.id, item.summary]);
         else
-          hiddenCalendars[item.id] = item.summary;
+          hiddenCalendars.push([item.id, item.summary]);
       }
+      calendars.sort((a, b) => a[1].localeCompare(b[1]));
+      hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
       installContextMenu(calendars, hiddenCalendars);
     } catch (error) {
       alert(`Request 'calendarList' failed:\n${error.stack}`);
