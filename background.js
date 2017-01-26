@@ -31,7 +31,7 @@
       let response = await fetch(icsLink).then(handleStatus);
       let responseText = await response.text();
       jcalData = ICAL.parse(responseText);
-    } catch(error) {
+    } catch (error) {
       alert(`Request to fetch .ics failed:\n${error.stack}`);
       return;
     }
@@ -40,7 +40,7 @@
       let eventIds = await Promise.all(vevents.map(
         vevent => createEvent(new ICAL.Event(vevent), calendarId)));
       alert(eventIds);
-    } catch(error) {
+    } catch (error) {
       alert(`The .ics file is invalid:\n${error.stack}`);
       return;
     }
@@ -77,7 +77,10 @@
   }
 
   async function createEvent(event, calendarId) {
-    let tabs = await chromep.tabs.query({active: true, currentWindow: true});
+    let tabs = await chromep.tabs.query({
+      active: true,
+      currentWindow: true
+    });
     let tabUrl = tabs[0].url;
     let gcalEvent = {
       'summary': event.summary,
@@ -97,17 +100,18 @@
     };
     console.log(JSON.stringify(gcalEvent));
     try {
-      let token = await chromep.identity.getAuthToken({"interactive": false});
+      let token = await chromep.identity.getAuthToken({
+        "interactive": false
+      });
       let response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
-        {
-          method: "POST",
-          headers: new Headers({
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }),
-          body: JSON.stringify(gcalEvent)
-        })
+          `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
+            method: "POST",
+            headers: new Headers({
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            }),
+            body: JSON.stringify(gcalEvent)
+          })
         .then(handleStatus);
       let responseEvent = await response.json();
       return responseEvent.id;
@@ -119,12 +123,13 @@
 
   async function fetchCalendars() {
     try {
-      let token = await chromep.identity.getAuthToken({"interactive": false});
+      let token = await chromep.identity.getAuthToken({
+        "interactive": false
+      });
       let response = await fetch(
-        `https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`,
-        {
-          method: "GET"
-        })
+          `https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`, {
+            method: "GET"
+          })
         .then(handleStatus);
       let responseCalendarList = await response.json();
       let calendars = {};
