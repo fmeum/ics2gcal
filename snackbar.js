@@ -45,7 +45,9 @@
         snackbar_action.innerText = action_label;
         snackbar_action.style.display = "initial";
         snackbar_action.onclick = function() {
-          sendResponse({clicked: true});
+          sendResponse({
+            clicked: true
+          });
           hideSnackbarNoTransition();
         };
       } else {
@@ -56,13 +58,10 @@
     };
     // Ensure that the old snackbar fades out before the new one fades in
     if (snackbar.classList.contains("show")) {
-      console.log("Old snackbar present, fade it out first");
       snackbar.classList.remove("show");
       // TODO: Use ontransitionend here
       window.setTimeout(showSnackbar, 300);
-      console.log("Old snackbar fades out");
     } else {
-      console.log("No old snackbar, just fade this one in");
       showSnackbar();
     }
     // Listener has to return true if sendResponse will be called asynchronously
