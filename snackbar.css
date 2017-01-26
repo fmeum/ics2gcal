@@ -1,3 +1,8 @@
+/* Helper class that temporarily turns off transitions */
+.no-transition {
+  transition: none !important;
+}
+
 #ics2gcal-snackbar {
   display: flex;
   flex-direction: row;

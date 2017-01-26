@@ -33,6 +33,12 @@
     let hideSnackbar = function() {
       snackbar.classList.remove("show");
     };
+    let hideSnackbarNoTransition = function() {
+      snackbar.classList.add("no-transition");
+      snackbar.classList.remove("show");
+      let _ = snackbar.offsetHeight; // Hack: Flush CSS changes
+      snackbar.classList.remove("no-transition");
+    };
     let showSnackbar = function() {
       snackbar_text.innerText = text;
       if (action_label) {
@@ -40,6 +46,7 @@
         snackbar_action.style.display = "initial";
         snackbar_action.onclick = function() {
           sendResponse({clicked: true});
+          hideSnackbarNoTransition();
         };
       } else {
         snackbar_action.style.display = "none";
