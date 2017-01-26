@@ -9,9 +9,7 @@
   const LINK_MENU_CONTEXT = {
     "contexts": ["link"],
     "targetUrlPatterns": [
-      "*://*/*.ics",
-      "*://*/*.ICS",
-      "*://*/*ics_view*"
+      "<all_urls>"
     ]
   };
 

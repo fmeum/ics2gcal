@@ -21,9 +21,7 @@
     "identity",
     "activeTab",
     "https://www.googleapis.com/*",
-    "*://*/*.ics*",
-    "*://*/*.ICS*",
-    "*://*/*ics_view*"
+    "<all_urls>"
   ],
   "oauth2":   {
     "client_id": "205438406793-rren6k6no1q4vgkvebg9kbft8o4srjvm.apps.googleusercontent.com",
