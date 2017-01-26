@@ -38,7 +38,7 @@
         snackbar_action.innerText = action_label;
         snackbar_action.style.display = "initial";
         snackbar_action.onclick = function() {
-          sendResponse({clicked: "true"});
+          sendResponse({clicked: true});
         };
       } else {
         snackbar_action.style.display = "none";

@@ -35,6 +35,15 @@
     chrome.tabs.sendMessage(activeTabId, request, callback);
   }
 
+  async function showSnackbar(text, action_label, callback) {
+    await messageActiveTab({
+      text,
+      action_label
+    }, function(response) {
+      if (response && response.clicked) callback();
+    });
+  }
+
   async function linkMenuCalendar_onClick(info) {
     const icsLink = info.linkUrl;
     const calendarId = info.menuItemId.split("/")[1];
@@ -64,27 +73,14 @@
     });
     await timeout(2000);
     console.log("Message tab: Event added");
-    await messageActiveTab({
-        "text": "Event addded",
-        "action_label": "View"
-      },
-      function(response) {
-        if (response.clicked) console.log(`View ${eventIds[0]}`);
-      });
+    await showSnackbar("Event addded", "View", () => console.log(
+      `View ${eventIds[0]}`));
     await timeout(2000);
     console.log("Message tab: Multiple events added");
-    await messageActiveTab({
-        "text": "Multiple events addded",
-        "action_label": "Undo"
-      },
-      function(response) {
-        if (response.clicked) console.log(`Undo ${eventIds[0]}`);
-      });
+    await showSnackbar("Multiple events added", "Undo", () => console.log(
+      `Undo ${eventIds[0]}`));
     await timeout(11000);
-    console.log("Message tab: ICS file invalid");
-    await messageActiveTab({
-      "text": "ICS file invalid"
-    });
+    await showSnackbar("ICS file invalid");
   }
 
   function removeContextMenu() {
