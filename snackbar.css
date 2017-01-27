@@ -1,0 +1,53 @@
+/* Helper class that temporarily turns off transitions */
+.no-transition {
+  transition: none !important;
+}
+
+#ics2gcal-snackbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  box-sizing: border-box;
+  position: fixed;
+  bottom: -48px;
+  left: 24px;
+  height: 48px;
+  min-width: 288px;
+  max-width: 568px;
+  border-radius: 2px;
+  background-color: #323232;
+  padding: 14px 24px 14px 24px;
+  z-index: 2147483647;
+  transition: bottom 0.3s cubic-bezier(0.16, 0.84, 0.44, 1.0);
+}
+
+#ics2gcal-snackbar>* {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#ics2gcal-snackbar.show {
+  bottom: 24px;
+}
+
+#ics2gcal-snackbar.show>* {
+  opacity: 1;
+}
+
+#ics2gcal-snackbar>span {
+  margin: 0;
+  font-family: "Roboto", Sans-Serif;
+  font-size: 14px;
+  color: #FFFFFF;
+}
+
+#ics2gcal-snackbar>a {
+  margin: 0 0 0 48px;
+  font-family: "Roboto", Sans-Serif;
+  /* TODO: switch to Roboto Medium */
+  font-size: 14px;
+  font-weight: 500;
+  color: #FF7043;
+  text-transform: uppercase;
+  text-decoration: none;
+}

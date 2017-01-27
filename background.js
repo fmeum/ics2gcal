@@ -21,26 +21,87 @@
     }
   }
 
+  // Promisify setTimeout
+  function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function messageActiveTab(request, callback) {
+    let tabs = await chromep.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+    let activeTabId = tabs[0].id;
+    chrome.tabs.sendMessage(activeTabId, request, callback);
+  }
+
+  async function showSnackbar(text, action_label, callback) {
+    chrome.tabs.insertCSS(null, {
+      file: "snackbar.css"
+    });
+    chrome.tabs.executeScript(null, {
+      file: "snackbar.js"
+    });
+    await messageActiveTab({
+      text,
+      action_label
+    }, response => {
+      if (response && response.clicked) callback();
+    });
+  }
+
   async function linkMenuCalendar_onClick(info) {
     const icsLink = info.linkUrl;
     const calendarId = info.menuItemId.split("/")[1];
-    let jcalData = '';
+    let responseText = '';
     try {
       let response = await fetch(icsLink).then(handleStatus);
-      let responseText = await response.text();
-      jcalData = ICAL.parse(responseText);
+      responseText = await response.text();
     } catch (error) {
-      alert(`Request to fetch .ics failed:\n${error.stack}`);
+      showSnackbar("Can't fetch iCal file.");
+      console.log(error);
       return;
     }
+    let events = [];
     try {
-      let vevents = new ICAL.Component(jcalData).getAllSubcomponents();
-      let eventIds = await Promise.all(vevents.map(
-        vevent => createEvent(new ICAL.Event(vevent), calendarId)));
-      alert(eventIds);
+      let jcalData = ICAL.parse(responseText);
+      events = new ICAL.Component(jcalData).getAllSubcomponents().map(
+        component => new ICAL.Event(component));
     } catch (error) {
-      alert(`The .ics file is invalid:\n${error.stack}`);
+      showSnackbar("The iCal file has an invalid format.");
+      console.log(error);
       return;
+    }
+    let gcalEvents = [];
+    try {
+      gcalEvents = await Promise.all(events.map(
+        event => createEvent(event, calendarId)));
+    } catch (error) {
+      if (events.length === 1) {
+        showSnackbar("Can't create the event.");
+      } else {
+        showSnackbar("Can't create the events.");
+      }
+      console.log(error);
+      return;
+    }
+    if (gcalEvents.length === 0) {
+      await showSnackbar("Empty iCal file, no events added.");
+    } else if (gcalEvents.length === 1) {
+      await showSnackbar("Event added.", "View",
+        () => window.open(gcalEvents[0].htmlLink, "_blank"));
+    } else {
+      await showSnackbar(`${gcalEvents.length} events added.`, "Undo",
+        async function() {
+          try {
+            Promise.all(gcalEvents.map(
+              gcalEvent => deleteEvent(calendarId, gcalEvent.id)
+            ));
+          } catch (error) {
+            showSnackbar("Can't delete the events.");
+            console.log(error);
+          }
+        });
     }
   }
 
@@ -74,6 +135,21 @@
     }
   }
 
+  async function deleteEvent(calendarId, eventId) {
+    let token = await chromep.identity.getAuthToken({
+      "interactive": false
+    });
+    return fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
+          method: "DELETE",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+        })
+      .then(handleStatus);
+  }
+
   async function createEvent(event, calendarId) {
     let tabs = await chromep.tabs.query({
       active: true,
@@ -96,30 +172,24 @@
         'useDefault': true
       }
     };
-    console.log(JSON.stringify(gcalEvent));
-    try {
-      let token = await chromep.identity.getAuthToken({
-        "interactive": false
-      });
-      let response = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
-            method: "POST",
-            headers: new Headers({
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            }),
-            body: JSON.stringify(gcalEvent)
-          })
-        .then(handleStatus);
-      let responseEvent = await response.json();
-      return responseEvent.id;
-    } catch (error) {
-      alert(`Request 'events' failed:\n${error.stack}`);
-      return;
-    }
+    let token = await chromep.identity.getAuthToken({
+      "interactive": false
+    });
+    let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
+          method: "POST",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+          body: JSON.stringify(gcalEvent)
+        })
+      .then(handleStatus);
+    return response.json();
   }
 
   async function fetchCalendars() {
+    let responseCalendarList = null;
     try {
       let token = await chromep.identity.getAuthToken({
         "interactive": false
@@ -129,29 +199,31 @@
             method: "GET"
           })
         .then(handleStatus);
-      let responseCalendarList = await response.json();
-      let calendars = [];
-      let hiddenCalendars = [];
-      for (let item of responseCalendarList.items) {
-        // Only consider calendars in which we can create events
-        if (item.accessRole != "owner" && item.accessRole != "writer")
-          continue;
-        if (item.selected)
-          calendars.push([item.id, item.summary]);
-        else
-          hiddenCalendars.push([item.id, item.summary]);
-      }
-      calendars.sort((a, b) => a[1].localeCompare(b[1]));
-      hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
-      installContextMenu(calendars, hiddenCalendars);
+      responseCalendarList = await response.json();
     } catch (error) {
-      alert(`Request 'calendarList' failed:\n${error.stack}`);
+      console.log("Failed to fetch calendars.");
+      console.log(error);
       return;
     }
-
+    let calendars = [];
+    let hiddenCalendars = [];
+    for (let item of responseCalendarList.items) {
+      // Only consider calendars in which we can create events
+      if (item.accessRole != "owner" && item.accessRole != "writer")
+        continue;
+      if (item.selected)
+        calendars.push([item.id, item.summary]);
+      else
+        hiddenCalendars.push([item.id, item.summary]);
+    }
+    calendars.sort((a, b) => a[1].localeCompare(b[1]));
+    hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
+    installContextMenu(calendars, hiddenCalendars);
   }
 
   chrome.runtime.onInstalled.addListener(fetchCalendars);
-  chrome.runtime.onStartup.addListener(fetchCalendars);
-  chrome.contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
+  chrome.runtime.onStartup
+    .addListener(fetchCalendars);
+  chrome.contextMenus.onClicked.addListener(
+    linkMenuCalendar_onClick);
 })();
