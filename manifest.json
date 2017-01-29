@@ -11,8 +11,8 @@
   "background": {
     "persistent": false,
     "scripts": [
-      "ical.min.js",
-      "chrome-promise.js",
+      "bower_components/ical.js/build/ical.min.js",
+      "bower_components/chrome-promise/chrome-promise.js",
       "background.js"
     ]
   },
