@@ -18,7 +18,7 @@
     // TODO: Use button instead of a
     snackbar.innerHTML =
       `<span id="${SNACKBAR_TEXT_ID}"></span>
-       <a href="javascript:void(0);" target="_blank" id="${SNACKBAR_ACTION_ID}"></a>`;
+       <button id="${SNACKBAR_ACTION_ID}"></button>`;
     document.body.appendChild(snackbar);
   }
   let snackbar_text = document.getElementById(SNACKBAR_TEXT_ID);
