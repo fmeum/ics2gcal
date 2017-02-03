@@ -105,11 +105,8 @@
     }
   }
 
-  function removeContextMenu() {
-    // TODO
-  }
-
-  function installContextMenu(calendars, hiddenCalendars) {
+  async function installContextMenu(calendars, hiddenCalendars) {
+    await chromep.contextMenus.removeAll();
     chrome.contextMenus.create(Object.assign({
       "id": LINK_MENU_ID,
       "title": "Add to calendar"
@@ -218,12 +215,13 @@
     }
     calendars.sort((a, b) => a[1].localeCompare(b[1]));
     hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
-    installContextMenu(calendars, hiddenCalendars);
+    await installContextMenu(calendars, hiddenCalendars);
   }
 
   chrome.runtime.onInstalled.addListener(fetchCalendars);
   chrome.runtime.onStartup
     .addListener(fetchCalendars);
+  chrome.browserAction.onClicked.addListener(fetchCalendars);
   chrome.contextMenus.onClicked.addListener(
     linkMenuCalendar_onClick);
 })();

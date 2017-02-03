@@ -8,6 +8,9 @@
 
   "author": "Fabian Henneke",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgOOWm/6fFzxL5P6zwlMPfJD+W7qdzXBmW50TvqN3BrZH3/9wcoc6q2vqnhqGmIrl1T/lHlRsN1yt3jKXzyYFRwg+kcvWZPFcerRmTGKcFeFb2nMZ/2UzwrmojhE1IBnNohfqrmyFvGYnIR85dwePXrP+KKJI4kBzh9bdqpQmPOYhQGDSP6qOvl9Q6jqsWMXGI8pYAuMMmPidx0tu/mEJA82LSZoGUMP8i7sx40FM09ztM2oSLxpD9JSprV9YqJG5xXUk6O2bHBoGwoC65UEC/xkwgsTSaaCI0Te0FemIl/pblishPvPX1mwHPkLH8AXT1DcDVmMyEhXW8eZjjXAENQIDAQAB",
+  "browser_action": {
+    "default_title": "Reload calendars"
+  },
   "background": {
     "persistent": false,
     "scripts": [
@@ -26,7 +29,7 @@
     "https://www.googleapis.com/*",
     "<all_urls>"
   ],
-  "oauth2":   {
+  "oauth2": {
     "client_id": "205438406793-rren6k6no1q4vgkvebg9kbft8o4srjvm.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/calendar"
