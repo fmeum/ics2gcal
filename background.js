@@ -168,14 +168,26 @@
         'dateTime': event.startDate.toString(),
         'timeZone': event.startDate.zone.toString()
       },
-      'end': {
-        'dateTime': event.endDate.toString(),
-        'timeZone': event.endDate.zone.toString()
-      },
       'reminders': {
         'useDefault': true
       }
     };
+    if (event.hasOwnProperty('endDate')) {
+      Object.assign(gcalEvent, {
+        'end': {
+          'dateTime': event.endDate.toString(),
+          'timeZone': event.endDate.zone.toString()
+        }
+      });
+    } else {
+      // If there is no end date, we assume a duration of 1h
+      Object.assign(gcalEvent, {
+        'end': {
+          'dateTime': event.startDate.adjust(0, 1, 0, 0).toString(),
+          'timeZone': event.startDate.zone.toString()
+        }
+      });
+    }
     return gcalEvent;
   }
 
