@@ -36,6 +36,12 @@
   }
 
   async function showSnackbar(text, action_label, callback) {
+    let robotoResponse = await fetch(
+      'https://fonts.googleapis.com/css?family=Roboto:400,500');
+    let robotoCode = await robotoResponse.text();
+    chrome.tabs.insertCSS(null, {
+      code: robotoCode
+    });
     chrome.tabs.insertCSS(null, {
       file: "snackbar.css"
     });
