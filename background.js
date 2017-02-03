@@ -68,22 +68,23 @@
       console.log(error);
       return;
     }
-    let events = [];
+    let gcalEvents = [];
     try {
       let jcalData = ICAL.parse(responseText);
-      events = new ICAL.Component(jcalData).getAllSubcomponents().map(
-        component => new ICAL.Event(component));
+      let jcalComponents = new ICAL.Component(jcalData).getAllSubcomponents();
+      gcalEvents = await Promise.all(jcalComponents.map(
+        component => toGcalEvent(new ICAL.Event(component))));
     } catch (error) {
       showSnackbar("The iCal file has an invalid format.");
       console.log(error);
       return;
     }
-    let gcalEvents = [];
+    let eventResponses = [];
     try {
-      gcalEvents = await Promise.all(events.map(
-        event => createEvent(event, calendarId)));
+      eventResponses = await Promise.all(gcalEvents.map(
+        gcalEvent => createEvent(gcalEvent, calendarId)));
     } catch (error) {
-      if (events.length === 1) {
+      if (gcalEvents.length === 1) {
         showSnackbar("Can't create the event.");
       } else {
         showSnackbar("Can't create the events.");
@@ -91,16 +92,16 @@
       console.log(error);
       return;
     }
-    if (gcalEvents.length === 0) {
+    if (eventResponses.length === 0) {
       await showSnackbar("Empty iCal file, no events added.");
-    } else if (gcalEvents.length === 1) {
+    } else if (eventResponses.length === 1) {
       await showSnackbar("Event added.", "View",
-        () => window.open(gcalEvents[0].htmlLink, "_blank"));
+        () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
-      await showSnackbar(`${gcalEvents.length} events added.`, "Undo",
+      await showSnackbar(`${eventResponses.length} events added.`, "Undo",
         async function() {
           try {
-            Promise.all(gcalEvents.map(
+            Promise.all(eventResponses.map(
               gcalEvent => deleteEvent(calendarId, gcalEvent.id)
             ));
           } catch (error) {
@@ -153,7 +154,7 @@
       .then(handleStatus);
   }
 
-  async function createEvent(event, calendarId) {
+  async function toGcalEvent(event) {
     let tabs = await chromep.tabs.query({
       active: true,
       currentWindow: true
@@ -175,6 +176,10 @@
         'useDefault': true
       }
     };
+    return gcalEvent;
+  }
+
+  async function createEvent(gcalEvent, calendarId) {
     let token = await chromep.identity.getAuthToken({
       "interactive": false
     });
@@ -227,7 +232,8 @@
   chrome.runtime.onInstalled.addListener(fetchCalendars);
   chrome.runtime.onStartup
     .addListener(fetchCalendars);
-  chrome.browserAction.onClicked.addListener(fetchCalendars);
+  chrome.browserAction.onClicked.addListener(
+    fetchCalendars);
   chrome.contextMenus.onClicked.addListener(
     linkMenuCalendar_onClick);
 })();
