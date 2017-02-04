@@ -155,7 +155,6 @@
   }
 
   async function toGcalEvent(event) {
-    console.log(event);
     let gcalEvent = {
       'start': {
         'dateTime': event.startDate.toString(),
