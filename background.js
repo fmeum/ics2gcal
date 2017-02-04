@@ -155,39 +155,48 @@
   }
 
   async function toGcalEvent(event) {
+    console.log(event);
+    let gcalEvent = {
+      'start': {
+        'dateTime': event.startDate.toString(),
+        'timeZone': event.startDate.zone.toString()
+      },
+      'description': '',
+      'reminders': {
+        'useDefault': true
+      }
+    };
+    if (event.summary)
+      gcalEvent.summary = event.summary;
+    if (event.location)
+      gcalEvent.location = event.location;
+    if (event.description)
+      gcalEvent.description = event.description;
+    let url = event.component.getFirstPropertyValue('url');
+    if (url)
+      if (gcalEvent.description)
+        gcalEvent.description += `\n\n${url}`;
+      else
+        gcalEvent.description += url;
+    if (event.hasOwnProperty('endDate')) {
+      gcalEvent.end = {
+        'dateTime': event.endDate.toString(),
+        'timeZone': event.endDate.zone.toString()
+      };
+    } else {
+      // If there is no end date, we assume a duration of 1h
+      gcalEvent.end = {
+        'dateTime': event.startDate.adjust(0, 1, 0, 0).toString(),
+        'timeZone': event.startDate.zone.toString()
+      };
+    }
     let tabs = await chromep.tabs.query({
       active: true,
       currentWindow: true
     });
     let tabUrl = tabs[0].url;
-    let gcalEvent = {
-      'summary': event.summary,
-      'location': event.location,
-      'description': `Source: ${tabUrl}`,
-      'start': {
-        'dateTime': event.startDate.toString(),
-        'timeZone': event.startDate.zone.toString()
-      },
-      'reminders': {
-        'useDefault': true
-      }
-    };
-    if (event.hasOwnProperty('endDate')) {
-      Object.assign(gcalEvent, {
-        'end': {
-          'dateTime': event.endDate.toString(),
-          'timeZone': event.endDate.zone.toString()
-        }
-      });
-    } else {
-      // If there is no end date, we assume a duration of 1h
-      Object.assign(gcalEvent, {
-        'end': {
-          'dateTime': event.startDate.adjust(0, 1, 0, 0).toString(),
-          'timeZone': event.startDate.zone.toString()
-        }
-      });
-    }
+    if (tabUrl !== url)
+      gcalEvent.description += `\n\nAdded from: ${tabUrl}`;
     return gcalEvent;
   }
 
