@@ -120,11 +120,15 @@
         "parentId": LINK_MENU_ID
       }, LINK_MENU_CONTEXT));
     }
-    chrome.contextMenus.create(Object.assign({
-      "id": LINK_MENU_SEPARATOR_ID,
-      "type": "separator",
-      "parentId": LINK_MENU_ID
-    }, LINK_MENU_CONTEXT));
+    // Show separator only if there are hidden calendars (but even if there are
+    // no visible calendars)
+    if (hiddenCalendars.length > 0) {
+      chrome.contextMenus.create(Object.assign({
+        "id": LINK_MENU_SEPARATOR_ID,
+        "type": "separator",
+        "parentId": LINK_MENU_ID
+      }, LINK_MENU_CONTEXT));
+    }
     for (let [calendarId, calendarTitle] of hiddenCalendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
