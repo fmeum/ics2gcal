@@ -141,7 +141,7 @@
 
   async function deleteEvent(calendarId, eventId) {
     let token = await chromep.identity.getAuthToken({
-      "interactive": false
+      interactive: true
     });
     return fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
@@ -201,7 +201,7 @@
 
   async function createEvent(gcalEvent, calendarId) {
     let token = await chromep.identity.getAuthToken({
-      "interactive": false
+      interactive: true
     });
     let response = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
@@ -216,12 +216,21 @@
     return response.json();
   }
 
-  async function fetchCalendars() {
+  async function fetchCalendars(interactive) {
+    let token = "";
+    try {
+      token = await chromep.identity.getAuthToken({
+        interactive
+      });
+    } catch (error) {
+      if (interactive) {
+        console.log("Failed to obtain OAuth token interactively.");
+        console.log(error);
+      }
+      return;
+    }
     let responseCalendarList = null;
     try {
-      let token = await chromep.identity.getAuthToken({
-        "interactive": false
-      });
       let response = await fetch(
           `https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`, {
             method: "GET"
@@ -249,8 +258,11 @@
     await installContextMenu(calendars, hiddenCalendars);
   }
 
-  chrome.runtime.onInstalled.addListener(fetchCalendars);
-  chrome.runtime.onStartup.addListener(fetchCalendars);
-  chrome.browserAction.onClicked.addListener(fetchCalendars);
-  chrome.contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
+  chrome.runtime.onInstalled.addListener(fetchCalendars.bind(null, false));
+  chrome
+    .runtime.onStartup.addListener(fetchCalendars.bind(null, false));
+  chrome
+    .browserAction.onClicked.addListener(fetchCalendars.bind(null, true));
+  chrome
+    .contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
 })();
