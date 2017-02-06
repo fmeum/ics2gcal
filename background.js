@@ -21,11 +21,6 @@
     }
   }
 
-  // Promisify setTimeout
-  function timeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   async function messageActiveTab(request, callback) {
     let tabs = await chromep.tabs.query({
       active: true,
