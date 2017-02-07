@@ -77,7 +77,7 @@
     let eventResponses = [];
     try {
       eventResponses = await Promise.all(gcalEvents.map(
-        gcalEvent => createEvent(gcalEvent, calendarId)));
+        gcalEvent => importEvent(gcalEvent, calendarId)));
     } catch (error) {
       if (gcalEvents.length === 1) {
         showSnackbar("Can't create the event.");
@@ -155,6 +155,7 @@
 
   async function toGcalEvent(event) {
     let gcalEvent = {
+      'iCalUID': event.uid,
       'start': {
         'dateTime': event.startDate.toString(),
         'timeZone': event.startDate.zone.toString()
@@ -198,12 +199,12 @@
     return gcalEvent;
   }
 
-  async function createEvent(gcalEvent, calendarId) {
+  async function importEvent(gcalEvent, calendarId) {
     let token = await chromep.identity.getAuthToken({
       interactive: true
     });
     let response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
           method: "POST",
           headers: new Headers({
             "Content-Type": "application/json",
