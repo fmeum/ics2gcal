@@ -139,9 +139,15 @@
   }
 
   async function deleteEvent(calendarId, eventId) {
-    let token = await chromep.identity.getAuthToken({
-      interactive: true
-    });
+    let token = '';
+    try {
+      token = await chromep.identity.getAuthToken({
+        interactive: false
+      });
+    } catch (error) {
+      updateBrowserAction(false);
+      throw error;
+    }
     return fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
           method: "DELETE",
@@ -200,9 +206,16 @@
   }
 
   async function importEvent(gcalEvent, calendarId) {
-    let token = await chromep.identity.getAuthToken({
-      interactive: true
-    });
+    let token = '';
+    try {
+      token = await chromep.identity.getAuthToken({
+        interactive: true
+      });
+    } catch (error) {
+      updateBrowserAction(false);
+      throw error;
+    }
+    updateBrowserAction(true);
     let response = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
           method: "POST",
