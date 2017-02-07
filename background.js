@@ -216,6 +216,24 @@
     return response.json();
   }
 
+  function updateBrowserAction(active) {
+    if (active) {
+      chrome.browserAction.setTitle({
+        title: "Update calendar list"
+      });
+      chrome.browserAction.setIcon({
+        path: "images/logo_active.png"
+      });
+    } else {
+      chrome.browserAction.setTitle({
+        title: "Authorize"
+      });
+      chrome.browserAction.setIcon({
+        path: "images/logo_inactive.png"
+      });
+    }
+  }
+
   async function fetchCalendars(interactive) {
     let token = "";
     try {
@@ -227,6 +245,7 @@
         console.log("Failed to obtain OAuth token interactively.");
         console.log(error);
       }
+      updateBrowserAction(false);
       return;
     }
     let responseCalendarList = null;
@@ -240,8 +259,10 @@
     } catch (error) {
       console.log("Failed to fetch calendars.");
       console.log(error);
+      updateBrowserAction(false);
       return;
     }
+    updateBrowserAction(true);
     let calendars = [];
     let hiddenCalendars = [];
     for (let item of responseCalendarList.items) {
