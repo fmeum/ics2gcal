@@ -25,13 +25,13 @@
     let robotoResponse = await fetch(
       'https://fonts.googleapis.com/css?family=Roboto:400,500');
     let robotoCode = await robotoResponse.text();
-    chrome.tabs.insertCSS(tab, {
+    await chromep.tabs.insertCSS(tab, {
       code: robotoCode
     });
-    chrome.tabs.insertCSS(tab, {
+    await chromep.tabs.insertCSS(tab, {
       file: "snackbar.css"
     });
-    chrome.tabs.executeScript(tab, {
+    await chromep.tabs.executeScript(tab, {
       file: "snackbar.js"
     });
     chrome.tabs.sendMessage(tab, {
