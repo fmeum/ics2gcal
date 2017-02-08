@@ -63,6 +63,10 @@
     try {
       let icalData = ICAL.parse(responseText);
       let icalRoot = new ICAL.Component(icalData);
+      // ical.js does not automatically populate its TimezoneService with
+      // custom time zones defined in VTIMEZONE components
+      let vtimezones = icalRoot.getAllSubcomponents("vtimezone");
+      vtimezones.forEach(vtimezone => ICAL.TimezoneService.register(vtimezone));
       let vevents = icalRoot.getAllSubcomponents("vevent");
       gcalEvents = vevents.map(vevent => toGcalEvent(new ICAL.Event(vevent),
         info.pageUrl));
