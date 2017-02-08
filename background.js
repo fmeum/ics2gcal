@@ -21,56 +21,53 @@
     }
   }
 
-  async function messageActiveTab(request, callback) {
+  async function showSnackbar(tab, text, action_label, callback) {
+    let robotoResponse = await fetch(
+      'https://fonts.googleapis.com/css?family=Roboto:400,500');
+    let robotoCode = await robotoResponse.text();
+    chrome.tabs.insertCSS(tab, {
+      code: robotoCode
+    });
+    chrome.tabs.insertCSS(tab, {
+      file: "snackbar.css"
+    });
+    chrome.tabs.executeScript(tab, {
+      file: "snackbar.js"
+    });
+    chrome.tabs.sendMessage(tab, {
+        text,
+        action_label
+      },
+      response => {
+        if (response && response.clicked) callback();
+      });
+  }
+
+  async function linkMenuCalendar_onClick(info) {
     let tabs = await chromep.tabs.query({
       active: true,
       currentWindow: true
     });
-    let activeTabId = tabs[0].id;
-    chrome.tabs.sendMessage(activeTabId, request, callback);
-  }
-
-  async function showSnackbar(text, action_label, callback) {
-    let robotoResponse = await fetch(
-      'https://fonts.googleapis.com/css?family=Roboto:400,500');
-    let robotoCode = await robotoResponse.text();
-    chrome.tabs.insertCSS(null, {
-      code: robotoCode
-    });
-    chrome.tabs.insertCSS(null, {
-      file: "snackbar.css"
-    });
-    chrome.tabs.executeScript(null, {
-      file: "snackbar.js"
-    });
-    await messageActiveTab({
-      text,
-      action_label
-    }, response => {
-      if (response && response.clicked) callback();
-    });
-  }
-
-  async function linkMenuCalendar_onClick(info) {
-    const icsLink = info.linkUrl;
+    const activeTab = tabs[0].id;
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
-      let response = await fetch(icsLink).then(handleStatus);
+      let response = await fetch(info.linkUrl).then(handleStatus);
       responseText = await response.text();
     } catch (error) {
-      showSnackbar("Can't fetch iCal file.");
+      await showSnackbar(activeTab, "Can't fetch iCal file.");
       console.log(error);
       return;
     }
     let gcalEvents = [];
     try {
-      let jcalData = ICAL.parse(responseText);
-      let jcalComponents = new ICAL.Component(jcalData).getAllSubcomponents();
-      gcalEvents = await Promise.all(jcalComponents.map(
-        component => toGcalEvent(new ICAL.Event(component))));
+      let icalData = ICAL.parse(responseText);
+      let icalRoot = new ICAL.Component(icalData);
+      let vevents = icalRoot.getAllSubcomponents("vevent");
+      gcalEvents = vevents.map(vevent => toGcalEvent(new ICAL.Event(vevent),
+        info.pageUrl));
     } catch (error) {
-      showSnackbar("The iCal file has an invalid format.");
+      await showSnackbar(activeTab, "The iCal file has an invalid format.");
       console.log(error);
       return;
     }
@@ -80,27 +77,28 @@
         gcalEvent => importEvent(gcalEvent, calendarId)));
     } catch (error) {
       if (gcalEvents.length === 1) {
-        showSnackbar("Can't create the event.");
+        await showSnackbar(activeTab, "Can't create the event.");
       } else {
-        showSnackbar("Can't create the events.");
+        await showSnackbar(activeTab, "Can't create the events.");
       }
       console.log(error);
       return;
     }
     if (eventResponses.length === 0) {
-      await showSnackbar("Empty iCal file, no events imported.");
+      await showSnackbar(activeTab, "Empty iCal file, no events imported.");
     } else if (eventResponses.length === 1) {
-      await showSnackbar("Event imported.", "View",
+      await showSnackbar(activeTab, "Event imported.", "View",
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
-      await showSnackbar(`${eventResponses.length} events added.`, "Undo",
+      await showSnackbar(activeTab, `${eventResponses.length} events added.`,
+        "Undo",
         async function() {
           try {
             Promise.all(eventResponses.map(
               gcalEvent => deleteEvent(calendarId, gcalEvent.id)
             ));
           } catch (error) {
-            showSnackbar("Can't delete the events.");
+            await showSnackbar(activeTab, "Can't delete the events.");
             console.log(error);
           }
         });
@@ -159,7 +157,7 @@
       .then(handleStatus);
   }
 
-  async function toGcalEvent(event) {
+  function toGcalEvent(event, sourceUrl) {
     let gcalEvent = {
       'iCalUID': event.uid,
       'start': {
@@ -195,13 +193,8 @@
         'timeZone': event.startDate.zone.toString()
       };
     }
-    let tabs = await chromep.tabs.query({
-      active: true,
-      currentWindow: true
-    });
-    let tabUrl = tabs[0].url;
-    if (tabUrl !== url)
-      gcalEvent.description += `\n\nAdded from: ${tabUrl}`;
+    if (sourceUrl)
+      gcalEvent.description += `\n\nAdded from: ${sourceUrl}`;
     return gcalEvent;
   }
 

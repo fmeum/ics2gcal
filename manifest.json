@@ -28,7 +28,7 @@
   "permissions": [
     "contextMenus",
     "identity",
-    "activeTab",
+    "tabs",
     "https://www.googleapis.com/*",
     "<all_urls>"
   ],
