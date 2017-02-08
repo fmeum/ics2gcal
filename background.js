@@ -88,9 +88,9 @@
       return;
     }
     if (eventResponses.length === 0) {
-      await showSnackbar("Empty iCal file, no events added.");
+      await showSnackbar("Empty iCal file, no events imported.");
     } else if (eventResponses.length === 1) {
-      await showSnackbar("Event added.", "View",
+      await showSnackbar("Event imported.", "View",
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
       await showSnackbar(`${eventResponses.length} events added.`, "Undo",
