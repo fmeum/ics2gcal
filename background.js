@@ -164,6 +164,10 @@
         'dateTime': event.startDate.toString(),
         'timeZone': event.startDate.zone.toString()
       },
+      'end': {
+        'dateTime': event.endDate.toString(),
+        'timeZone': event.endDate.zone.toString()
+      },
       'description': '',
       'reminders': {
         'useDefault': true
@@ -181,18 +185,6 @@
         gcalEvent.description += `\n\n${url}`;
       else
         gcalEvent.description += url;
-    if (event.hasOwnProperty('endDate')) {
-      gcalEvent.end = {
-        'dateTime': event.endDate.toString(),
-        'timeZone': event.endDate.zone.toString()
-      };
-    } else {
-      // If there is no end date, we assume a duration of 1h
-      gcalEvent.end = {
-        'dateTime': event.startDate.adjust(0, 1, 0, 0).toString(),
-        'timeZone': event.startDate.zone.toString()
-      };
-    }
     if (sourceUrl)
       gcalEvent.description += `\n\nAdded from: ${sourceUrl}`;
     return gcalEvent;
