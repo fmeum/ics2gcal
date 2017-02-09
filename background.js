@@ -161,6 +161,18 @@
       .then(handleStatus);
   }
 
+  function getRecurrenceRules(event) {
+    // Note: EXRULE has been deprecated and can lead to ambiguous results
+    const RECURRENCE_PROPERTIES = ['rrule', 'rdate', 'exdate', 'exrule'];
+    let recurrenceRuleStrings = [];
+    for (let recurrenceProperty of RECURRENCE_PROPERTIES) {
+      for (let rule of event.component.getAllProperties(recurrenceProperty)) {
+        recurrenceRuleStrings.push(rule.toICALString());
+      }
+    }
+    return recurrenceRuleStrings;
+  }
+
   function toGcalEvent(event, sourceUrl) {
     let gcalEvent = {
       'iCalUID': event.uid,
@@ -177,6 +189,8 @@
         'useDefault': true
       }
     };
+    if (event.isRecurring())
+      gcalEvent.recurrence = getRecurrenceRules(event);
     if (event.summary)
       gcalEvent.summary = event.summary;
     if (event.location)
