@@ -102,17 +102,8 @@
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
       showSnackbar(activeTab, `${eventResponses.length} events added.`,
-        "Undo",
-        async function() {
-          try {
-            Promise.all(eventResponses.map(
-              gcalEvent => deleteEvent(calendarId, gcalEvent.id)
-            ));
-          } catch (error) {
-            showSnackbar(activeTab, "Can't delete the events.");
-            console.log(error);
-          }
-        });
+        "View all", () => eventResponses.forEach(response => window.open(
+          response.htmlLink, "_blank")));
     }
   }
 
