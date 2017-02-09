@@ -59,6 +59,10 @@
       console.log(error);
       return;
     }
+    // Do not await, but run in parallel
+    // TODO: This may lead to a race condition which could be prevented by using
+    // a callback here.
+    showSnackbar(activeTab, "Parsing...");
     let gcalEvents = [];
     try {
       let icalData = ICAL.parse(responseText);
