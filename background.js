@@ -167,7 +167,12 @@
     let recurrenceRuleStrings = [];
     for (let recurrenceProperty of RECURRENCE_PROPERTIES) {
       for (let rule of event.component.getAllProperties(recurrenceProperty)) {
-        recurrenceRuleStrings.push(rule.toICALString());
+        let ruleString = rule.toICALString();
+        // Some servers put trailing comma in date lists, which show up as
+        // ",--T::" in the ical.js output. As a courtesy, we remove them.
+        const TRAILING_COMMA_HACK = /,--T::/g;
+        ruleString = ruleString.replace(TRAILING_COMMA_HACK, '');
+        recurrenceRuleStrings.push(ruleString);
       }
     }
     return recurrenceRuleStrings;
