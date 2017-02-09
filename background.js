@@ -21,10 +21,11 @@
     }
   }
 
-  async function showSnackbar(tab, text, action_label, callback) {
+  async function injectSnackbar(tab) {
     let robotoResponse = await fetch(
       'https://fonts.googleapis.com/css?family=Roboto:400,500');
     let robotoCode = await robotoResponse.text();
+    // Load styles first to prevent flashes
     await chromep.tabs.insertCSS(tab, {
       code: robotoCode
     });
@@ -34,6 +35,9 @@
     await chromep.tabs.executeScript(tab, {
       file: "snackbar.js"
     });
+  }
+
+  function showSnackbar(tab, text, action_label, callback) {
     chrome.tabs.sendMessage(tab, {
         text,
         action_label
@@ -49,19 +53,18 @@
       currentWindow: true
     });
     const activeTab = tabs[0].id;
+    // Execute in "parallel", messages to the snackbar will be queued
+    injectSnackbar(activeTab);
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
       let response = await fetch(info.linkUrl).then(handleStatus);
       responseText = await response.text();
     } catch (error) {
-      await showSnackbar(activeTab, "Can't fetch iCal file.");
+      showSnackbar(activeTab, "Can't fetch iCal file.");
       console.log(error);
       return;
     }
-    // Do not await, but run in parallel
-    // TODO: This may lead to a race condition which could be prevented by using
-    // a callback here.
     showSnackbar(activeTab, "Parsing...");
     let gcalEvents = [];
     try {
@@ -75,7 +78,7 @@
       gcalEvents = vevents.map(vevent => toGcalEvent(new ICAL.Event(vevent),
         info.pageUrl));
     } catch (error) {
-      await showSnackbar(activeTab, "The iCal file has an invalid format.");
+      showSnackbar(activeTab, "The iCal file has an invalid format.");
       console.log(error);
       return;
     }
@@ -85,20 +88,20 @@
         gcalEvent => importEvent(gcalEvent, calendarId)));
     } catch (error) {
       if (gcalEvents.length === 1) {
-        await showSnackbar(activeTab, "Can't create the event.");
+        showSnackbar(activeTab, "Can't create the event.");
       } else {
-        await showSnackbar(activeTab, "Can't create the events.");
+        showSnackbar(activeTab, "Can't create the events.");
       }
       console.log(error);
       return;
     }
     if (eventResponses.length === 0) {
-      await showSnackbar(activeTab, "Empty iCal file, no events imported.");
+      showSnackbar(activeTab, "Empty iCal file, no events imported.");
     } else if (eventResponses.length === 1) {
-      await showSnackbar(activeTab, "Event imported.", "View",
+      showSnackbar(activeTab, "Event imported.", "View",
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
-      await showSnackbar(activeTab, `${eventResponses.length} events added.`,
+      showSnackbar(activeTab, `${eventResponses.length} events added.`,
         "Undo",
         async function() {
           try {
@@ -106,7 +109,7 @@
               gcalEvent => deleteEvent(calendarId, gcalEvent.id)
             ));
           } catch (error) {
-            await showSnackbar(activeTab, "Can't delete the events.");
+            showSnackbar(activeTab, "Can't delete the events.");
             console.log(error);
           }
         });
