@@ -52,20 +52,21 @@
       active: true,
       currentWindow: true
     });
-    const activeTab = tabs[0].id;
+    const activeTab = tabs[0];
+    const activeTabId = activeTab.id;
     // Execute in "parallel", messages to the snackbar will be queued
-    injectSnackbar(activeTab);
+    injectSnackbar(activeTabId);
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
       let response = await fetch(info.linkUrl).then(handleStatus);
       responseText = await response.text();
     } catch (error) {
-      showSnackbar(activeTab, "Can't fetch iCal file.");
+      showSnackbar(activeTabId, "Can't fetch iCal file.");
       console.log(error);
       return;
     }
-    showSnackbar(activeTab, "Parsing...");
+    showSnackbar(activeTabId, "Parsing...");
     let gcalEvents = [];
     try {
       let icalData = ICAL.parse(responseText);
@@ -76,9 +77,9 @@
       vtimezones.forEach(vtimezone => ICAL.TimezoneService.register(vtimezone));
       let vevents = icalRoot.getAllSubcomponents("vevent");
       gcalEvents = vevents.map(vevent => toGcalEvent(new ICAL.Event(vevent),
-        info.pageUrl));
+        activeTab));
     } catch (error) {
-      showSnackbar(activeTab, "The iCal file has an invalid format.");
+      showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
       return;
     }
@@ -88,20 +89,20 @@
         gcalEvent => importEvent(gcalEvent, calendarId)));
     } catch (error) {
       if (gcalEvents.length === 1) {
-        showSnackbar(activeTab, "Can't create the event.");
+        showSnackbar(activeTabId, "Can't create the event.");
       } else {
-        showSnackbar(activeTab, "Can't create the events.");
+        showSnackbar(activeTabId, "Can't create the events.");
       }
       console.log(error);
       return;
     }
     if (eventResponses.length === 0) {
-      showSnackbar(activeTab, "Empty iCal file, no events imported.");
+      showSnackbar(activeTabId, "Empty iCal file, no events imported.");
     } else if (eventResponses.length === 1) {
-      showSnackbar(activeTab, "Event imported.", "View",
+      showSnackbar(activeTabId, "Event imported.", "View",
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
-      showSnackbar(activeTab, `${eventResponses.length} events added.`,
+      showSnackbar(activeTabId, `${eventResponses.length} events added.`,
         "View all", () => eventResponses.forEach(response => window.open(
           response.htmlLink, "_blank")));
     }
@@ -176,7 +177,7 @@
     return recurrenceRuleStrings;
   }
 
-  function toGcalEvent(event, sourceUrl) {
+  function toGcalEvent(event, tabInfo) {
     let gcalEvent = {
       'iCalUID': event.uid,
       'start': {
@@ -206,8 +207,11 @@
         gcalEvent.description += `\n\n${url}`;
       else
         gcalEvent.description += url;
-    if (sourceUrl)
-      gcalEvent.description += `\n\nAdded from: ${sourceUrl}`;
+    if (tabInfo) {
+      gcalEvent.source = {};
+      gcalEvent.source.title = tabInfo.title;
+      gcalEvent.source.url = tabInfo.url;
+    }
     return gcalEvent;
   }
 
