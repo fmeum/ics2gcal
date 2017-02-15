@@ -94,8 +94,9 @@
       eventResponses = await Promise.all(gcalEventsAndExDates.map(
         async function(gcalEventAndExDates) {
           let [gcalEvent, exDates] = gcalEventAndExDates;
-          let eventId = await importEvent(gcalEvent, calendarId);
-          return cancelExDates(calendarId, eventId, exDates);
+          let event = await importEvent(gcalEvent, calendarId);
+          await cancelExDates(calendarId, event, exDates);
+          return event;
         }));
     } catch (error) {
       if (gcalEventsAndExDates.length === 1) {
@@ -113,8 +114,9 @@
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
       showSnackbar(activeTabId, `${eventResponses.length} events added.`,
-        "View all", () => eventResponses.forEach(response => window.open(
-          response.htmlLink, "_blank")));
+        "View all",
+        () => eventResponses.forEach(
+          response => window.open(response.htmlLink, "_blank")));
     }
   }
 
@@ -149,7 +151,7 @@
     }
   }
 
-  async function cancelExDates(calendarId, eventId, exDates) {
+  async function cancelExDates(calendarId, event, exDates) {
     let token = '';
     try {
       token = await chromep.identity.getAuthToken({
@@ -159,21 +161,57 @@
       updateBrowserAction(false);
       throw error;
     }
-    console.log(eventId, exDates);
     await Promise.all(exDates.map(async function(exDate) {
       let timeString = exDate.toString();
-      let instances = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}/instances?originalStart=${timeString}`, {
-            method: "GET",
-            headers: new Headers({
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            }),
-          })
-        .then(handleStatus)
-        .then(response => response.json());
-      console.log(eventId, exDate, instances);
-      // TODO: Cancel returned instances
+      let instances = [];
+      // We may retry fetching instances for exDate
+      let retry = false;
+      while (true) {
+        instances = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
+              method: "GET",
+              headers: new Headers({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }),
+            })
+          .then(handleStatus)
+          .then(response => response.json());
+        if (instances.items.length === 0) {
+          if (retry) {
+            // The corrected exDate also didn't match and we give up. This will
+            // also be triggered if we import an event a second time.
+            return;
+          } else if (exDate.timezone === "Z" && event.start.hasOwnProperty(
+              'dateTime')) {
+            // If the exDate is specified in UTC and is not an all-day event,
+            // we try again using the time zone in event.start.
+            retry = true;
+            let startUtcOffset = ICAL.VCardTime.fromDateAndOrTimeString(
+              event.start.dateTime).zone;
+            exDate.adjust(
+              /* d */ 0, /* h */ 0, /* m */ 0, -startUtcOffset.toSeconds());
+            timeString = exDate.toString();
+          }
+        } else {
+          // The given exDate matches at least one instance of the recurrent
+          // event.
+          break;
+        }
+      };
+      await Promise.all(instances.items.map(instance => {
+        instance.status = "cancelled";
+        return fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
+              method: "PUT",
+              headers: new Headers({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }),
+              body: JSON.stringify(instance),
+            })
+          .then(handleStatus);
+      }));
     }));
   }
 
@@ -285,7 +323,7 @@
         })
       .then(handleStatus)
       .then(response => response.json());
-    return responseJson.id;
+    return responseJson;
   }
 
   function updateBrowserAction(active) {
