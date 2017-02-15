@@ -67,8 +67,14 @@
       return;
     }
     showSnackbar(activeTabId, "Parsing...");
-    let gcalEvents = [];
+    let gcalEventsAndExDates = [];
     try {
+      // Some servers put trailing comma in date lists, which trip up ical.js
+      // output. As a courtesy we remove trailing commas as long as they do not
+      // precede a folded line.
+      // https://regex101.com/r/Q2VEZB/1
+      const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
+      responseText = responseText.replace(TRAILING_COMMA_PATTERN, `\n$1`);
       let icalData = ICAL.parse(responseText);
       let icalRoot = new ICAL.Component(icalData);
       // ical.js does not automatically populate its TimezoneService with
@@ -76,8 +82,8 @@
       let vtimezones = icalRoot.getAllSubcomponents("vtimezone");
       vtimezones.forEach(vtimezone => ICAL.TimezoneService.register(vtimezone));
       let vevents = icalRoot.getAllSubcomponents("vevent");
-      gcalEvents = vevents.map(vevent => toGcalEvent(new ICAL.Event(vevent),
-        activeTab));
+      gcalEventsAndExDates = vevents.map(vevent => toGcalEvent(new ICAL.Event(
+        vevent), activeTab));
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
@@ -85,10 +91,15 @@
     }
     let eventResponses = [];
     try {
-      eventResponses = await Promise.all(gcalEvents.map(
-        gcalEvent => importEvent(gcalEvent, calendarId)));
+      eventResponses = await Promise.all(gcalEventsAndExDates.map(
+        async function(gcalEventAndExDates) {
+          let [gcalEvent, exDates] = gcalEventAndExDates;
+          let event = await importEvent(gcalEvent, calendarId);
+          await cancelExDates(calendarId, event, exDates);
+          return event;
+        }));
     } catch (error) {
-      if (gcalEvents.length === 1) {
+      if (gcalEventsAndExDates.length === 1) {
         showSnackbar(activeTabId, "Can't create the event.");
       } else {
         showSnackbar(activeTabId, "Can't create the events.");
@@ -103,8 +114,9 @@
         () => window.open(eventResponses[0].htmlLink, "_blank"));
     } else {
       showSnackbar(activeTabId, `${eventResponses.length} events added.`,
-        "View all", () => eventResponses.forEach(response => window.open(
-          response.htmlLink, "_blank")));
+        "View all",
+        () => eventResponses.forEach(
+          response => window.open(response.htmlLink, "_blank")));
     }
   }
 
@@ -139,6 +151,70 @@
     }
   }
 
+  async function cancelExDates(calendarId, event, exDates) {
+    let token = '';
+    try {
+      token = await chromep.identity.getAuthToken({
+        interactive: false
+      });
+    } catch (error) {
+      updateBrowserAction(false);
+      throw error;
+    }
+    await Promise.all(exDates.map(async function(exDate) {
+      let timeString = exDate.toString();
+      let instances = [];
+      // We may retry fetching instances for exDate
+      let retry = false;
+      while (true) {
+        instances = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
+              method: "GET",
+              headers: new Headers({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }),
+            })
+          .then(handleStatus)
+          .then(response => response.json());
+        if (instances.items.length === 0) {
+          if (retry) {
+            // The corrected exDate also didn't match and we give up. This will
+            // also be triggered if we import an event a second time.
+            return;
+          } else if (exDate.timezone === "Z" && event.start.hasOwnProperty(
+              'dateTime')) {
+            // If the exDate is specified in UTC and is not an all-day event,
+            // we try again using the time zone in event.start.
+            retry = true;
+            let startUtcOffset = ICAL.VCardTime.fromDateAndOrTimeString(
+              event.start.dateTime).zone;
+            exDate.adjust(
+              /* d */ 0, /* h */ 0, /* m */ 0, -startUtcOffset.toSeconds());
+            timeString = exDate.toString();
+          }
+        } else {
+          // The given exDate matches at least one instance of the recurrent
+          // event.
+          break;
+        }
+      };
+      await Promise.all(instances.items.map(instance => {
+        instance.status = "cancelled";
+        return fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
+              method: "PUT",
+              headers: new Headers({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              }),
+              body: JSON.stringify(instance),
+            })
+          .then(handleStatus);
+      }));
+    }));
+  }
+
   async function deleteEvent(calendarId, eventId) {
     let token = '';
     try {
@@ -161,17 +237,20 @@
   }
 
   function getRecurrenceRules(event) {
-    // Note: EXRULE has been deprecated and can lead to ambiguous results
-    const RECURRENCE_PROPERTIES = ['rrule', 'rdate', 'exdate', 'exrule'];
+    // Rebind to the top-level component of the event
+    let component = event.component;
+    // Note: EXRULE has been deprecated and can lead to ambiguous results, so we
+    // don't support it. EXDATE is treated specially. If RDATE is present, the
+    // resulting recurrent event in the Google Calendar will be broken in the
+    // sense that the instances can't be edited all at once (they can still be
+    // deleted together).
     let recurrenceRuleStrings = [];
-    for (let recurrenceProperty of RECURRENCE_PROPERTIES) {
-      for (let rule of event.component.getAllProperties(recurrenceProperty)) {
-        let ruleString = rule.toICALString();
-        // Some servers put trailing comma in date lists, which show up as
-        // ",--T::" in the ical.js output. As a courtesy, we remove them.
-        const TRAILING_COMMA_HACK = /,--T::/g;
-        ruleString = ruleString.replace(TRAILING_COMMA_HACK, '');
-        recurrenceRuleStrings.push(ruleString);
+    for (let recurrenceProperty of ['rrule', 'rdate']) {
+      for (let i = 0; i < component.getAllProperties(recurrenceProperty).length; i++) {
+        let ruleString = component.getAllProperties(recurrenceProperty)[i].toICALString();
+        if (recurrenceProperty === 'rrule' || recurrenceProperty ===
+          'rdate')
+          recurrenceRuleStrings.push(ruleString);
       }
     }
     return recurrenceRuleStrings;
@@ -193,8 +272,15 @@
         'useDefault': true
       }
     };
-    if (event.isRecurring())
+    let exDates = [];
+    if (event.isRecurring()) {
       gcalEvent.recurrence = getRecurrenceRules(event);
+      var expanded = new ICAL.RecurExpansion({
+        component: event.component,
+        dtstart: event.component.getFirstPropertyValue('dtstart')
+      });
+      exDates = expanded.exDates;
+    }
     if (event.summary)
       gcalEvent.summary = event.summary;
     if (event.location)
@@ -212,7 +298,7 @@
       gcalEvent.source.title = tabInfo.title;
       gcalEvent.source.url = tabInfo.url;
     }
-    return gcalEvent;
+    return [gcalEvent, exDates];
   }
 
   async function importEvent(gcalEvent, calendarId) {
@@ -226,7 +312,7 @@
       throw error;
     }
     updateBrowserAction(true);
-    let response = await fetch(
+    let responseJson = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
           method: "POST",
           headers: new Headers({
@@ -235,8 +321,9 @@
           }),
           body: JSON.stringify(gcalEvent)
         })
-      .then(handleStatus);
-    return response.json();
+      .then(handleStatus)
+      .then(response => response.json());
+    return responseJson;
   }
 
   function updateBrowserAction(active) {
