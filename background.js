@@ -167,7 +167,8 @@
       updateBrowserAction(false);
       throw error;
     }
-    updateBrowserAction(true);
+    if (interactive)
+      updateBrowserAction(true);
     return token;
   }
 
