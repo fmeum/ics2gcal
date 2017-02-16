@@ -13,6 +13,8 @@
     ]
   };
 
+  let calendarIdToTitle = {};
+
   function handleStatus(response) {
     if (response.status >= 200 && response.status < 300) {
       return Promise.resolve(response);
@@ -42,9 +44,8 @@
         text,
         action_label
       },
-      response => {
-        if (response && response.clicked) callback();
-      });
+      response => callback ? callback(response.clicked) : {}
+    );
   }
 
   function parseIcs(icsContent) {
@@ -71,8 +72,8 @@
     });
     const activeTab = tabs[0];
     const activeTabId = activeTab.id;
-    // Execute in "parallel", messages to the snackbar will be queued
-    injectSnackbar(activeTabId);
+    await injectSnackbar(activeTabId);
+    const calendarTitle = info.menuItem
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
@@ -83,7 +84,6 @@
       console.log(error);
       return;
     }
-    showSnackbar(activeTabId, "Parsing...");
     let gcalEventsAndExDates = [];
     try {
       gcalEventsAndExDates = parseIcs(responseText).map(
@@ -93,45 +93,66 @@
       console.log(error);
       return;
     }
-    let eventResponses = [];
-    try {
-      eventResponses = await Promise.all(gcalEventsAndExDates.map(
-        async function(gcalEventAndExDates) {
-          let [gcalEvent, exDates] = gcalEventAndExDates;
-          let event = await importEvent(gcalEvent, calendarId);
-          await cancelExDates(calendarId, event, exDates);
-          return event;
-        }));
-    } catch (error) {
-      if (gcalEventsAndExDates.length === 1) {
-        showSnackbar(activeTabId, "Can't create the event.");
-      } else {
-        showSnackbar(activeTabId, "Can't create the events.");
-      }
-      console.log(error);
-      return;
-    }
-    if (eventResponses.length === 0) {
+    let importMessage = '';
+    if (gcalEventsAndExDates.length === 0) {
       showSnackbar(activeTabId, "Empty iCal file, no events imported.");
-    } else if (eventResponses.length === 1) {
-      showSnackbar(activeTabId, "Event imported.", "View",
-        () => window.open(eventResponses[0].htmlLink, "_blank"));
+      return;
+    } else if (gcalEventsAndExDates.length === 1) {
+      importMessage =
+        `Importing event into '${calendarIdToTitle[calendarId]}'...`;
     } else {
-      showSnackbar(activeTabId, `${eventResponses.length} events added.`,
-        "View all",
-        () => eventResponses.forEach(
-          response => window.open(response.htmlLink, "_blank")));
+      importMessage =
+        `Importing ${gcalEventsAndExDates.length} events into '${calendarIdToTitle[calendarId]}'...`;
     }
+    showSnackbar(activeTabId, importMessage, "Cancel", async function(clicked) {
+      if (!clicked) {
+        let eventResponses = [];
+        try {
+          eventResponses = await Promise.all(gcalEventsAndExDates.map(
+            async function(gcalEventAndExDates) {
+              let [gcalEvent, exDates] = gcalEventAndExDates;
+              let event = await importEvent(gcalEvent, calendarId);
+              await cancelExDates(calendarId, event, exDates);
+              return event;
+            }));
+        } catch (error) {
+          if (gcalEventsAndExDates.length === 1) {
+            showSnackbar(activeTabId, "Can't create the event.");
+          } else {
+            showSnackbar(activeTabId, "Can't create the events.");
+          }
+          console.log(error);
+          return;
+        }
+        if (eventResponses.length === 0) {} else if (eventResponses.length ===
+          1) {
+          showSnackbar(activeTabId,
+            `Event imported into '${calendarIdToTitle[calendarId]}'.`,
+            "View",
+            clicked => clicked ? window.open(eventResponses[0].htmlLink,
+              "_blank") : {});
+        } else {
+          showSnackbar(activeTabId,
+            `${eventResponses.length} events imported into '${calendarIdToTitle[calendarId]}'.`,
+            "View all",
+            clicked =>
+            clicked => clicked ? eventResponses.forEach(response =>
+              window.open(response.htmlLink, "_blank")) : {});
+        }
+      }
+    });
   }
 
   async function installContextMenu(calendars, hiddenCalendars) {
     await chromep.contextMenus.removeAll();
+    calendarIdToTitle = {};
     chrome.contextMenus.create(Object.assign({
       "id": LINK_MENU_ID,
       "title": "Add to calendar"
     }, LINK_MENU_CONTEXT));
     calendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of calendars) {
+      calendarIdToTitle[calendarId] = calendarTitle;
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
         "title": calendarTitle,
@@ -149,6 +170,7 @@
     }
     hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of hiddenCalendars) {
+      calendarIdToTitle[calendarId] = calendarTitle;
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
         "title": calendarTitle,
