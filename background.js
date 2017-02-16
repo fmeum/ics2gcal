@@ -171,25 +171,46 @@
     return token;
   }
 
+  async function fetchInstancesWithOriginalStart(token, calendarId, event,
+    icalDate) {
+    const timeString = icalDate.toString();
+    let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
+          method: "GET",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+        })
+      .then(handleStatus);
+    let responseJson = await response.json();
+    return responseJson.items;
+  }
+
+  async function cancelInstance(token, calendarId, instance) {
+    instance.status = "cancelled";
+    await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
+          method: "PUT",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+          body: JSON.stringify(instance),
+        })
+      .then(handleStatus);
+  }
+
   async function cancelExDates(calendarId, event, exDates) {
     let token = await authenticate(false);
     await Promise.all(exDates.map(async function(exDate) {
-      let timeString = exDate.toString();
       let instances = [];
       // We may retry fetching instances for exDate
       let retry = false;
       while (true) {
-        instances = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
-              method: "GET",
-              headers: new Headers({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              }),
-            })
-          .then(handleStatus)
-          .then(response => response.json());
-        if (instances.items.length === 0) {
+        instances = await fetchInstancesWithOriginalStart(token,
+          calendarId, event, exDate);
+        if (instances.length === 0) {
           if (retry) {
             // The corrected exDate also didn't match and we give up. This will
             // also be triggered if we import an event a second time.
@@ -203,7 +224,6 @@
               event.start.dateTime).zone;
             exDate.adjust(
               /* d */ 0, /* h */ 0, /* m */ 0, -startUtcOffset.toSeconds());
-            timeString = exDate.toString();
           }
         } else {
           // The given exDate matches at least one instance of the recurrent
@@ -211,19 +231,8 @@
           break;
         }
       };
-      await Promise.all(instances.items.map(instance => {
-        instance.status = "cancelled";
-        return fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
-              method: "PUT",
-              headers: new Headers({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              }),
-              body: JSON.stringify(instance),
-            })
-          .then(handleStatus);
-      }));
+      await Promise.all(instances.map(instance => cancelInstance(token,
+        calendarId, instance)));
     }));
   }
 
