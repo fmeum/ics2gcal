@@ -146,8 +146,9 @@
             console.log(error);
             return;
           }
-          if (eventResponses.length === 0) {} else if (eventResponses.length ===
-            1) {
+          if (eventResponses.length === 0) {
+            // TODO
+          } else if (eventResponses.length === 1) {
             showSnackbar(activeTabId,
               `Event imported into '${calendarIdToTitle[calendarId]}'.`,
               "View",
