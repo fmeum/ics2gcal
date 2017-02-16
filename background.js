@@ -78,6 +78,11 @@
     const activeTab = tabs[0];
     const activeTabId = activeTab.id;
     await injectSnackbar(activeTabId);
+    // If the user disables and then re-enables the app, the context menus will
+    // show up magically without installContextMenus ever having been called.
+    // In this case, we have to populate the list of calendars here.
+    if (Object.keys(calendarIdToTitle).length === 0)
+      await fetchCalendars(true);
     const calendarTitle = info.menuItem
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
@@ -165,7 +170,6 @@
   }
 
   async function installContextMenu(calendars, hiddenCalendars) {
-    await chromep.contextMenus.removeAll();
     calendarIdToTitle = {};
     chrome.contextMenus.create(Object.assign({
       "id": LINK_MENU_ID,
@@ -377,6 +381,7 @@
   }
 
   async function fetchCalendars(interactive) {
+    await chromep.contextMenus.removeAll();
     let token = await authenticate(interactive);
     let responseCalendarList = null;
     try {
