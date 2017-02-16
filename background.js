@@ -47,6 +47,23 @@
       });
   }
 
+  function parseIcs(icsContent) {
+    // Some servers put trailing comma in date lists, which trip up ical.js
+    // output. As a courtesy we remove trailing commas as long as they do not
+    // precede a folded line.
+    // https://regex101.com/r/Q2VEZB/1
+    const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
+    responseText = responseText.replace(TRAILING_COMMA_PATTERN, `\n$1`);
+    let icalData = ICAL.parse(icsContent);
+    let icalRoot = new ICAL.Component(icalData);
+    // ical.js does not automatically populate its TimezoneService with
+    // custom time zones defined in VTIMEZONE components
+    icalRoot.getAllSubcomponents("vtimezone").forEach(
+      vtimezone => ICAL.TimezoneService.register(vtimezone));
+    return icalRoot.getAllSubcomponents("vevent").map(
+      vevent => toGcalEvent(new ICAL.Event(vevent), activeTab));
+  }
+
   async function linkMenuCalendar_onClick(info) {
     let tabs = await chromep.tabs.query({
       active: true,
@@ -69,21 +86,7 @@
     showSnackbar(activeTabId, "Parsing...");
     let gcalEventsAndExDates = [];
     try {
-      // Some servers put trailing comma in date lists, which trip up ical.js
-      // output. As a courtesy we remove trailing commas as long as they do not
-      // precede a folded line.
-      // https://regex101.com/r/Q2VEZB/1
-      const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
-      responseText = responseText.replace(TRAILING_COMMA_PATTERN, `\n$1`);
-      let icalData = ICAL.parse(responseText);
-      let icalRoot = new ICAL.Component(icalData);
-      // ical.js does not automatically populate its TimezoneService with
-      // custom time zones defined in VTIMEZONE components
-      let vtimezones = icalRoot.getAllSubcomponents("vtimezone");
-      vtimezones.forEach(vtimezone => ICAL.TimezoneService.register(vtimezone));
-      let vevents = icalRoot.getAllSubcomponents("vevent");
-      gcalEventsAndExDates = vevents.map(vevent => toGcalEvent(new ICAL.Event(
-        vevent), activeTab));
+      gcalEventsAndExDates = parseIcs(responseText);
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
