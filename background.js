@@ -145,7 +145,6 @@
           showSnackbar(activeTabId,
             `${eventResponses.length} events imported into '${calendarIdToTitle[calendarId]}'.`,
             "View all",
-            clicked =>
             clicked => clicked ? eventResponses.forEach(response =>
               window.open(response.htmlLink, "_blank")) : {});
         }
