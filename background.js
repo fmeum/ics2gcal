@@ -220,11 +220,11 @@
     return token;
   }
 
-  async function fetchInstancesWithOriginalStart(token, calendarId, event,
+  async function fetchInstancesWithOriginalStart(token, calendarId, eventId,
     icalDate) {
     const timeString = icalDate.toString();
     let response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}/instances?originalStart=${encodeURIComponent(timeString)}`, {
           method: "GET",
           headers: new Headers({
             "Content-Type": "application/json",
@@ -236,6 +236,38 @@
     return responseJson.items;
   }
 
+  async function fetchInstancesWithinBounds(token, calendarId, event,
+    startTimeMin, startTimeMax) {
+    let startTimeMaxUtc = ICAL.Timezone.convert_time(startTimeMax,
+      startTimeMax.zone,
+      ICAL.Timezone.utcTimezone);
+    // The Google Calendar API demands that we provide an explicit UTC
+    // offset.
+    let startTimeMaxUtcString = startTimeMaxUtc.toString().replace('Z', '+00:00');
+    // The 'timeMin' parameter used by the Google Calendar API gives a lower
+    // bound on the end time, not the start time. We thus have to shift by the
+    // duration of the event first.
+    // TODO: This only works if start and end are specified in the same time
+    // zone since fromDateTimeString ignores the UTC offset.
+    let eventDuration = ICAL.Time.fromDateTimeString(event.end.dateTime).subtractDateTz(
+      ICAL.Time.fromDateTimeString(event.start.dateTime));
+    let endTimeMin = startTimeMin.clone();
+    endTimeMin.addDuration(eventDuration);
+    let endTimeMinUtc = ICAL.Timezone.convert_time(endTimeMin, endTimeMin.zone,
+      ICAL.Timezone.utcTimezone);
+    let endTimeMinUtcString = endTimeMinUtc.toString().replace('Z', '+00:00');
+    let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?timeMin=${encodeURIComponent(endTimeMinUtcString)}&timeMax=${encodeURIComponent(startTimeMaxUtcString)}`, {
+          method: "GET",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+        })
+      .then(handleStatus);
+    let responseJson = await response.json();
+    return responseJson.items;
+  }
   async function cancelInstance(token, calendarId, instance) {
     instance.status = "cancelled";
     await fetch(
@@ -254,32 +286,29 @@
     let token = await authenticate(false);
     await Promise.all(exDates.map(async function(exDate) {
       let instances = [];
-      // We may retry fetching instances for exDate
-      let retry = false;
-      while (true) {
-        instances = await fetchInstancesWithOriginalStart(token,
-          calendarId, event, exDate);
-        if (instances.length === 0) {
-          if (retry) {
-            // The corrected exDate also didn't match and we give up. This will
-            // also be triggered if we import an event a second time.
-            return;
-          } else if (exDate.timezone === "Z" && event.start.hasOwnProperty(
-              'dateTime')) {
-            // If the exDate is specified in UTC and is not an all-day event,
-            // we try again using the time zone in event.start.
-            retry = true;
-            let startUtcOffset = ICAL.VCardTime.fromDateAndOrTimeString(
-              event.start.dateTime).zone;
-            exDate.adjust(
-              /* d */ 0, /* h */ 0, /* m */ 0, -startUtcOffset.toSeconds());
-          }
-        } else {
-          // The given exDate matches at least one instance of the recurrent
-          // event.
-          break;
-        }
-      };
+      instances = await fetchInstancesWithOriginalStart(token,
+        calendarId, event.id, exDate);
+      if (instances.length === 0 && event.start.hasOwnProperty(
+          'dateTime')) {
+        // If the event is not an all-day event and we get no exact match
+        // for the exDate, we check whether there is a single instance on
+        // the day described by exDate (with respect to exDate's time zone).
+        // If there is a single instance on this day, we assume that the
+        // exDate's time is off and this instance should be cancelled. This
+        // appears to be Outlook's standard behavior.
+        let startDay = exDate.clone();
+        startDay.adjust(/* d */0, -exDate.hour, -exDate.minute, -exDate.second);
+        let endDay = startDay.clone();
+        endDay.adjust(1, 0, 0, 0);
+        instances = await fetchInstancesWithinBounds(token, calendarId, event,
+          startDay, endDay);
+        // If we still get zero matches or match more than one event, we give up
+        // and silently ignore this exDate.
+        if (instances.length !== 1)
+          return;
+      }
+      // The iCalendar specification says that duplicate instances must not be
+      // generated, so strictly speaking this .all should not be necessary.
       await Promise.all(instances.map(instance => cancelInstance(token,
         calendarId, instance)));
     }));
