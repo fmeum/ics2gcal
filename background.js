@@ -248,9 +248,7 @@
     for (let recurrenceProperty of ['rrule', 'rdate']) {
       for (let i = 0; i < component.getAllProperties(recurrenceProperty).length; i++) {
         let ruleString = component.getAllProperties(recurrenceProperty)[i].toICALString();
-        if (recurrenceProperty === 'rrule' || recurrenceProperty ===
-          'rdate')
-          recurrenceRuleStrings.push(ruleString);
+        recurrenceRuleStrings.push(ruleString);
       }
     }
     return recurrenceRuleStrings;
