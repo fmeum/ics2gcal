@@ -104,6 +104,13 @@
       importMessage =
         `Importing ${gcalEventsAndExDates.length} events into '${calendarIdToTitle[calendarId]}'...`;
     }
+    // As we implement cancelling via lazy execution, we will notify the user of
+    // possible event loss if they try to leave the page while we haven't
+    // committed.
+    window.addEventListener('onbeforeunload', e => true);
+    await chromep.tabs.executeScript(activeTabId, {
+      code: "window.onbeforeunload = e => true;"
+    });
     showSnackbar(activeTabId, importMessage, "Cancel", async function(clicked) {
       if (!clicked) {
         let eventResponses = [];
@@ -122,6 +129,9 @@
             showSnackbar(activeTabId, "Can't create the events.");
           }
           console.log(error);
+          await chromep.tabs.executeScript(activeTabId, {
+            code: "window.onbeforeunload = e => null;"
+          });
           return;
         }
         if (eventResponses.length === 0) {} else if (eventResponses.length ===
@@ -140,6 +150,9 @@
               window.open(response.htmlLink, "_blank")) : {});
         }
       }
+      await chromep.tabs.executeScript(activeTabId, {
+        code: "window.onbeforeunload = e => null;"
+      });
     });
   }
 
