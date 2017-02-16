@@ -47,6 +47,23 @@
       });
   }
 
+  function parseIcs(icsContent) {
+    // Some servers put trailing comma in date lists, which trip up ical.js
+    // output. As a courtesy we remove trailing commas as long as they do not
+    // precede a folded line.
+    // https://regex101.com/r/Q2VEZB/1
+    const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
+    icsContent = icsContent.replace(TRAILING_COMMA_PATTERN, `\n$1`);
+    let icalData = ICAL.parse(icsContent);
+    let icalRoot = new ICAL.Component(icalData);
+    // ical.js does not automatically populate its TimezoneService with
+    // custom time zones defined in VTIMEZONE components
+    icalRoot.getAllSubcomponents("vtimezone").forEach(
+      vtimezone => ICAL.TimezoneService.register(vtimezone));
+    return icalRoot.getAllSubcomponents("vevent").map(
+      vevent => new ICAL.Event(vevent));
+  }
+
   async function linkMenuCalendar_onClick(info) {
     let tabs = await chromep.tabs.query({
       active: true,
@@ -69,21 +86,8 @@
     showSnackbar(activeTabId, "Parsing...");
     let gcalEventsAndExDates = [];
     try {
-      // Some servers put trailing comma in date lists, which trip up ical.js
-      // output. As a courtesy we remove trailing commas as long as they do not
-      // precede a folded line.
-      // https://regex101.com/r/Q2VEZB/1
-      const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
-      responseText = responseText.replace(TRAILING_COMMA_PATTERN, `\n$1`);
-      let icalData = ICAL.parse(responseText);
-      let icalRoot = new ICAL.Component(icalData);
-      // ical.js does not automatically populate its TimezoneService with
-      // custom time zones defined in VTIMEZONE components
-      let vtimezones = icalRoot.getAllSubcomponents("vtimezone");
-      vtimezones.forEach(vtimezone => ICAL.TimezoneService.register(vtimezone));
-      let vevents = icalRoot.getAllSubcomponents("vevent");
-      gcalEventsAndExDates = vevents.map(vevent => toGcalEvent(new ICAL.Event(
-        vevent), activeTab));
+      gcalEventsAndExDates = parseIcs(responseText).map(
+        event => toGcalEvent(event, activeTab));
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
@@ -126,6 +130,7 @@
       "id": LINK_MENU_ID,
       "title": "Add to calendar"
     }, LINK_MENU_CONTEXT));
+    calendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of calendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
@@ -142,6 +147,7 @@
         "parentId": LINK_MENU_ID
       }, LINK_MENU_CONTEXT));
     }
+    hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of hiddenCalendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
@@ -151,33 +157,60 @@
     }
   }
 
-  async function cancelExDates(calendarId, event, exDates) {
+  function authenticate(interactive) {
     let token = '';
     try {
-      token = await chromep.identity.getAuthToken({
-        interactive: false
+      token = chromep.identity.getAuthToken({
+        interactive
       });
     } catch (error) {
       updateBrowserAction(false);
       throw error;
     }
+    updateBrowserAction(true);
+    return token;
+  }
+
+  async function fetchInstancesWithOriginalStart(token, calendarId, event,
+    icalDate) {
+    const timeString = icalDate.toString();
+    let response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
+          method: "GET",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+        })
+      .then(handleStatus);
+    let responseJson = await response.json();
+    return responseJson.items;
+  }
+
+  async function cancelInstance(token, calendarId, instance) {
+    instance.status = "cancelled";
+    await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
+          method: "PUT",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+          body: JSON.stringify(instance),
+        })
+      .then(handleStatus);
+  }
+
+  async function cancelExDates(calendarId, event, exDates) {
+    let token = await authenticate(false);
     await Promise.all(exDates.map(async function(exDate) {
-      let timeString = exDate.toString();
       let instances = [];
       // We may retry fetching instances for exDate
       let retry = false;
       while (true) {
-        instances = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${event.id}/instances?originalStart=${timeString}`, {
-              method: "GET",
-              headers: new Headers({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              }),
-            })
-          .then(handleStatus)
-          .then(response => response.json());
-        if (instances.items.length === 0) {
+        instances = await fetchInstancesWithOriginalStart(token,
+          calendarId, event, exDate);
+        if (instances.length === 0) {
           if (retry) {
             // The corrected exDate also didn't match and we give up. This will
             // also be triggered if we import an event a second time.
@@ -191,7 +224,6 @@
               event.start.dateTime).zone;
             exDate.adjust(
               /* d */ 0, /* h */ 0, /* m */ 0, -startUtcOffset.toSeconds());
-            timeString = exDate.toString();
           }
         } else {
           // The given exDate matches at least one instance of the recurrent
@@ -199,41 +231,9 @@
           break;
         }
       };
-      await Promise.all(instances.items.map(instance => {
-        instance.status = "cancelled";
-        return fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${instance.id}`, {
-              method: "PUT",
-              headers: new Headers({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-              }),
-              body: JSON.stringify(instance),
-            })
-          .then(handleStatus);
-      }));
+      await Promise.all(instances.map(instance => cancelInstance(token,
+        calendarId, instance)));
     }));
-  }
-
-  async function deleteEvent(calendarId, eventId) {
-    let token = '';
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive: false
-      });
-    } catch (error) {
-      updateBrowserAction(false);
-      throw error;
-    }
-    return fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
-          method: "DELETE",
-          headers: new Headers({
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }),
-        })
-      .then(handleStatus);
   }
 
   function getRecurrenceRules(event) {
@@ -248,9 +248,7 @@
     for (let recurrenceProperty of ['rrule', 'rdate']) {
       for (let i = 0; i < component.getAllProperties(recurrenceProperty).length; i++) {
         let ruleString = component.getAllProperties(recurrenceProperty)[i].toICALString();
-        if (recurrenceProperty === 'rrule' || recurrenceProperty ===
-          'rdate')
-          recurrenceRuleStrings.push(ruleString);
+        recurrenceRuleStrings.push(ruleString);
       }
     }
     return recurrenceRuleStrings;
@@ -302,17 +300,8 @@
   }
 
   async function importEvent(gcalEvent, calendarId) {
-    let token = '';
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive: true
-      });
-    } catch (error) {
-      updateBrowserAction(false);
-      throw error;
-    }
-    updateBrowserAction(true);
-    let responseJson = await fetch(
+    let token = await authenticate(true);
+    let response = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
           method: "POST",
           headers: new Headers({
@@ -322,8 +311,7 @@
           body: JSON.stringify(gcalEvent)
         })
       .then(handleStatus)
-      .then(response => response.json());
-    return responseJson;
+    return response.json();
   }
 
   function updateBrowserAction(active) {
@@ -345,19 +333,7 @@
   }
 
   async function fetchCalendars(interactive) {
-    let token = "";
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive
-      });
-    } catch (error) {
-      if (interactive) {
-        console.log("Failed to obtain OAuth token interactively.");
-        console.log(error);
-      }
-      updateBrowserAction(false);
-      return;
-    }
+    let token = await authenticate(interactive);
     let responseCalendarList = null;
     try {
       let response = await fetch(
@@ -384,16 +360,11 @@
       else
         hiddenCalendars.push([item.id, item.summary]);
     }
-    calendars.sort((a, b) => a[1].localeCompare(b[1]));
-    hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
     await installContextMenu(calendars, hiddenCalendars);
   }
 
   chrome.runtime.onInstalled.addListener(fetchCalendars.bind(null, false));
-  chrome
-    .runtime.onStartup.addListener(fetchCalendars.bind(null, false));
-  chrome
-    .browserAction.onClicked.addListener(fetchCalendars.bind(null, true));
-  chrome
-    .contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
+  chrome.runtime.onStartup.addListener(fetchCalendars.bind(null, false));
+  chrome.browserAction.onClicked.addListener(fetchCalendars.bind(null, true));
+  chrome.contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
 })();
