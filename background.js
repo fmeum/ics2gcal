@@ -53,7 +53,7 @@
     // precede a folded line.
     // https://regex101.com/r/Q2VEZB/1
     const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
-    responseText = responseText.replace(TRAILING_COMMA_PATTERN, `\n$1`);
+    icsContent = icsContent.replace(TRAILING_COMMA_PATTERN, `\n$1`);
     let icalData = ICAL.parse(icsContent);
     let icalRoot = new ICAL.Component(icalData);
     // ical.js does not automatically populate its TimezoneService with
@@ -61,7 +61,7 @@
     icalRoot.getAllSubcomponents("vtimezone").forEach(
       vtimezone => ICAL.TimezoneService.register(vtimezone));
     return icalRoot.getAllSubcomponents("vevent").map(
-      vevent => toGcalEvent(new ICAL.Event(vevent), activeTab));
+      vevent => new ICAL.Event(vevent));
   }
 
   async function linkMenuCalendar_onClick(info) {
@@ -86,7 +86,8 @@
     showSnackbar(activeTabId, "Parsing...");
     let gcalEventsAndExDates = [];
     try {
-      gcalEventsAndExDates = parseIcs(responseText);
+      gcalEventsAndExDates = parseIcs(responseText).map(
+        event => toGcalEvent(event, activeTab));
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
