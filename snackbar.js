@@ -46,12 +46,12 @@
       if (action_label) {
         snackbar_action.innerText = action_label;
         snackbar_action.style.display = "initial";
-        snackbar_action.onclick = function() {
+        snackbar_action.addEventListener('onclick', function() {
           sendResponse({
             clicked: true
           });
           hideSnackbarNoTransition();
-        };
+        });
       } else {
         snackbar_action.style.display = "none";
       }
