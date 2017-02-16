@@ -126,6 +126,7 @@
       "id": LINK_MENU_ID,
       "title": "Add to calendar"
     }, LINK_MENU_CONTEXT));
+    calendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of calendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
@@ -142,6 +143,7 @@
         "parentId": LINK_MENU_ID
       }, LINK_MENU_CONTEXT));
     }
+    hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
     for (let [calendarId, calendarTitle] of hiddenCalendars) {
       chrome.contextMenus.create(Object.assign({
         "id": LINK_MENU_CALENDAR_ID_PREFIX + calendarId,
@@ -347,8 +349,6 @@
       else
         hiddenCalendars.push([item.id, item.summary]);
     }
-    calendars.sort((a, b) => a[1].localeCompare(b[1]));
-    hiddenCalendars.sort((a, b) => a[1].localeCompare(b[1]));
     await installContextMenu(calendars, hiddenCalendars);
   }
 
