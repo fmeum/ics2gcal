@@ -46,7 +46,7 @@
       if (action_label) {
         snackbar_action.innerText = action_label;
         snackbar_action.style.display = "initial";
-        snackbar_action.addEventListener('onclick', function() {
+        snackbar_action.addEventListener('click', function() {
           sendResponse({
             clicked: true
           });
