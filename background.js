@@ -14,6 +14,7 @@
   };
 
   let calendarIdToTitle = {};
+  let mutexLinkMenuCalendar_onClick = false;
 
   function handleStatus(response) {
     if (response.status >= 200 && response.status < 300) {
@@ -66,6 +67,10 @@
   }
 
   async function linkMenuCalendar_onClick(info) {
+    // Temporarily ignore clicks while we process one
+    if (mutexLinkMenuCalendar_onClick)
+      return;
+    mutexLinkMenuCalendar_onClick = true;
     let tabs = await chromep.tabs.query({
       active: true,
       currentWindow: true
@@ -82,6 +87,7 @@
     } catch (error) {
       showSnackbar(activeTabId, "Can't fetch iCal file.");
       console.log(error);
+      mutexLinkMenuCalendar_onClick = false;
       return;
     }
     let gcalEventsAndExDates = [];
@@ -91,11 +97,13 @@
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
+      mutexLinkMenuCalendar_onClick = false;
       return;
     }
     let importMessage = '';
     if (gcalEventsAndExDates.length === 0) {
       showSnackbar(activeTabId, "Empty iCal file, no events imported.");
+      mutexLinkMenuCalendar_onClick = false;
       return;
     } else if (gcalEventsAndExDates.length === 1) {
       importMessage =
@@ -112,43 +120,44 @@
       code: "window.onbeforeunload = e => true;"
     });
     showSnackbar(activeTabId, importMessage, "Cancel", async function(clicked) {
-      if (!clicked) {
-        let eventResponses = [];
-        try {
-          eventResponses = await Promise.all(gcalEventsAndExDates.map(
-            async function(gcalEventAndExDates) {
-              let [gcalEvent, exDates] = gcalEventAndExDates;
-              let event = await importEvent(gcalEvent, calendarId);
-              await cancelExDates(calendarId, event, exDates);
-              return event;
-            }));
-        } catch (error) {
-          if (gcalEventsAndExDates.length === 1) {
-            showSnackbar(activeTabId, "Can't create the event.");
-          } else {
-            showSnackbar(activeTabId, "Can't create the events.");
+      // Use an asynchronous closure as replacement for RAII
+      await async function() {
+        if (!clicked) {
+          let eventResponses = [];
+          try {
+            eventResponses = await Promise.all(gcalEventsAndExDates.map(
+              async function(gcalEventAndExDates) {
+                let [gcalEvent, exDates] = gcalEventAndExDates;
+                let event = await importEvent(gcalEvent, calendarId);
+                await cancelExDates(calendarId, event, exDates);
+                return event;
+              }));
+          } catch (error) {
+            if (gcalEventsAndExDates.length === 1) {
+              showSnackbar(activeTabId, "Can't create the event.");
+            } else {
+              showSnackbar(activeTabId, "Can't create the events.");
+            }
+            console.log(error);
+            return;
           }
-          console.log(error);
-          await chromep.tabs.executeScript(activeTabId, {
-            code: "window.onbeforeunload = e => null;"
-          });
-          return;
+          if (eventResponses.length === 0) {} else if (eventResponses.length ===
+            1) {
+            showSnackbar(activeTabId,
+              `Event imported into '${calendarIdToTitle[calendarId]}'.`,
+              "View",
+              clicked => clicked ? window.open(eventResponses[0].htmlLink,
+                "_blank") : {});
+          } else {
+            showSnackbar(activeTabId,
+              `${eventResponses.length} events imported into '${calendarIdToTitle[calendarId]}'.`,
+              "View all",
+              clicked => clicked ? eventResponses.forEach(response =>
+                window.open(response.htmlLink, "_blank")) : {});
+          }
         }
-        if (eventResponses.length === 0) {} else if (eventResponses.length ===
-          1) {
-          showSnackbar(activeTabId,
-            `Event imported into '${calendarIdToTitle[calendarId]}'.`,
-            "View",
-            clicked => clicked ? window.open(eventResponses[0].htmlLink,
-              "_blank") : {});
-        } else {
-          showSnackbar(activeTabId,
-            `${eventResponses.length} events imported into '${calendarIdToTitle[calendarId]}'.`,
-            "View all",
-            clicked => clicked ? eventResponses.forEach(response =>
-              window.open(response.htmlLink, "_blank")) : {});
-        }
-      }
+      }();
+      mutexLinkMenuCalendar_onClick = false;
       await chromep.tabs.executeScript(activeTabId, {
         code: "window.onbeforeunload = e => null;"
       });
