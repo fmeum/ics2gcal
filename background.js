@@ -221,19 +221,6 @@
     }));
   }
 
-  async function deleteEvent(calendarId, eventId) {
-    let token = await authenticate(false);
-    return fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
-          method: "DELETE",
-          headers: new Headers({
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }),
-        })
-      .then(handleStatus);
-  }
-
   function getRecurrenceRules(event) {
     // Rebind to the top-level component of the event
     let component = event.component;
