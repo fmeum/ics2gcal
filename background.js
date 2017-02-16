@@ -151,16 +151,22 @@
     }
   }
 
-  async function cancelExDates(calendarId, event, exDates) {
+  function authenticate(interactive) {
     let token = '';
     try {
-      token = await chromep.identity.getAuthToken({
-        interactive: false
+      token = chromep.identity.getAuthToken({
+        interactive
       });
     } catch (error) {
       updateBrowserAction(false);
       throw error;
     }
+    updateBrowserAction(true);
+    return token;
+  }
+
+  async function cancelExDates(calendarId, event, exDates) {
+    let token = await authenticate(false);
     await Promise.all(exDates.map(async function(exDate) {
       let timeString = exDate.toString();
       let instances = [];
@@ -216,15 +222,7 @@
   }
 
   async function deleteEvent(calendarId, eventId) {
-    let token = '';
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive: false
-      });
-    } catch (error) {
-      updateBrowserAction(false);
-      throw error;
-    }
+    let token = await authenticate(false);
     return fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`, {
           method: "DELETE",
@@ -302,17 +300,8 @@
   }
 
   async function importEvent(gcalEvent, calendarId) {
-    let token = '';
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive: true
-      });
-    } catch (error) {
-      updateBrowserAction(false);
-      throw error;
-    }
-    updateBrowserAction(true);
-    let responseJson = await fetch(
+    let token = await authenticate(true);
+    let response = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
           method: "POST",
           headers: new Headers({
@@ -322,8 +311,7 @@
           body: JSON.stringify(gcalEvent)
         })
       .then(handleStatus)
-      .then(response => response.json());
-    return responseJson;
+    return response.json();
   }
 
   function updateBrowserAction(active) {
@@ -345,19 +333,7 @@
   }
 
   async function fetchCalendars(interactive) {
-    let token = "";
-    try {
-      token = await chromep.identity.getAuthToken({
-        interactive
-      });
-    } catch (error) {
-      if (interactive) {
-        console.log("Failed to obtain OAuth token interactively.");
-        console.log(error);
-      }
-      updateBrowserAction(false);
-      return;
-    }
+    let token = await authenticate(interactive);
     let responseCalendarList = null;
     try {
       let response = await fetch(
