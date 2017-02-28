@@ -56,6 +56,10 @@
     // https://regex101.com/r/Q2VEZB/1
     const TRAILING_COMMA_PATTERN = /,\n(\S)/g;
     icsContent = icsContent.replace(TRAILING_COMMA_PATTERN, `\n$1`);
+    // We also remove empty RDATE and EXDATE properties
+    // https://regex101.com/r/5tWWwt/1
+    const EMPTY_PROPERTY_PATTERN = /^(RDATE|EXDATE):$/gm;
+    icsContent = icsContent.replace(EMPTY_PROPERTY_PATTERN, '');
     let icalData = ICAL.parse(icsContent);
     let icalRoot = new ICAL.Component(icalData);
     // ical.js does not automatically populate its TimezoneService with
