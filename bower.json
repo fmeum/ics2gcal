@@ -25,9 +25,5 @@
   "dependencies": {
     "chrome-promise": "^2.0.2",
     "ical.js": "^1.2.2"
-  },
-  "devDependencies": {
-    "chai": "^3.5.0",
-    "mocha": "^3.2.0"
   }
 }
