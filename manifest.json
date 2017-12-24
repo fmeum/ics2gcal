@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.4.9",
+  "version": "0.5.0",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {
@@ -20,8 +20,8 @@
   "background": {
     "persistent": false,
     "scripts": [
-      "bower_components/ical.js/build/ical.min.js",
-      "bower_components/chrome-promise/chrome-promise.js",
+      "node_modules/ical.js/build/ical.min.js",
+      "node_modules/chrome-promise/chrome-promise.js",
       "background.js"
     ]
   },

@@ -1,0 +1,14 @@
+{
+  "name": "ics2gcal",
+  "version": "0.5.0",
+  "description": "Import .ics files into Google Calendar with just two clicks",
+  "main": "background.js",
+  "repository": "https://github.com/FabianHenneke/icstogcal",
+  "author": "Fabian Henneke",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "chrome-promise": "^2.0.2",
+    "ical.js": "^1.2.2"
+  }
+}

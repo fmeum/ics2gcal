@@ -13,8 +13,7 @@ A popup notification will inform you about the number of events added and allow 
 # Install in Chrome
 You can install the extension directly from the [Chrome Web Store](https://chrome.google.com/webstore/detail/ics-to-gcal/ljobcbehhifehkmamikmchekbbljopao). If you want to make changes to the extension and test it locally, you have to:
 
-1. Run `bower install` to install dependencies ([ical.js](https://github.com/mozilla-comm/ical.js/) and [chrome-promise](https://github.com/tfoxy/chrome-promise)).
+1. Run `yarn install` to install dependencies ([ical.js](https://github.com/mozilla-comm/ical.js/) and [chrome-promise](https://github.com/tfoxy/chrome-promise)).
 2. In Chrome, under `More tools -> Extensions`, mark the `Developer mode` checkbox and use `Load unpacked extension...`.
 
-Examples of both valid and invalid iCalendar files to test on can be found
-[here](https://ics-to-gcal-912f8.firebaseapp.com/).
+Examples of both valid and invalid iCalendar files to test on can be found in the `tests` folder. They have to be hosted by a web server since the Chrome extension has no permission to access `file://` URLs.
