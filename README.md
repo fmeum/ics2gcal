@@ -3,6 +3,8 @@ Found an interesting event online that comes as an iCal file (`*.ics`) and want 
 
 ICS to GCal correctly imports recurrent events (to the extent they are supported by Google Calendar) and automatically fixes some deviations from the iCalendar specification that are rather common (such as trailing commas in date lists, exceptional dates not specified with the correct time,...).
 
+![ics2gcal](https://github.com/FabianHenneke/ics2gcal/raw/master/assets/ics2gcal.1.png)
+
 How to use:
 
 0. Before the first use, click on the extension symbol in the browser toolbar to allow access to you calendars.
