@@ -91,7 +91,8 @@
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
-      let response = await fetch(info.linkUrl).then(handleStatus);
+      let response = await fetch(info.linkUrl, {credentials: 'include'}).
+          then(handleStatus);
       responseText = await response.text();
     } catch (error) {
       showSnackbar(activeTabId, "Can't fetch iCal file.");
