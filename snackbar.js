@@ -8,7 +8,7 @@
   const SNACKBAR_ID = "ics2gcal-snackbar";
   const SNACKBAR_TEXT_ID = "ics2gcal-snackbar-text";
   const SNACKBAR_ACTION_ID = "ics2gcal-snackbar-action";
-  const SNACKBAR_TIMEOUT_MS = 7000;
+  const SNACKBAR_TIMEOUT_MS = 5000;
 
   // Inject empty snackbar into the page if it doesn't already exist
   let snackbar = document.getElementById(SNACKBAR_ID);
