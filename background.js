@@ -87,7 +87,7 @@
     // In this case, we have to populate the list of calendars here.
     if (Object.keys(calendarIdToTitle).length === 0)
       await fetchCalendars(true);
-    const calendarTitle = info.menuItem
+    const calendarTitle = info.menuItem;
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
@@ -355,9 +355,9 @@
     let exDates = [];
     if (event.isRecurring()) {
       gcalEvent.recurrence = getRecurrenceRules(event);
-      var expanded = new ICAL.RecurExpansion({
+      const expanded = new ICAL.RecurExpansion({
         component: event.component,
-        dtstart: event.component.getFirstPropertyValue('dtstart')
+        dtstart: event.component.getFirstPropertyValue('dtstart'),
       });
       exDates = expanded.exDates;
     }
@@ -391,8 +391,7 @@
             "Authorization": `Bearer ${token}`
           }),
           body: JSON.stringify(gcalEvent)
-        })
-      .then(handleStatus)
+        }).then(handleStatus);
     return response.json();
   }
 
@@ -436,7 +435,7 @@
     let hiddenCalendars = [];
     for (let item of responseCalendarList.items) {
       // Only consider calendars in which we can create events
-      if (item.accessRole != "owner" && item.accessRole != "writer")
+      if (item.accessRole !== 'owner' && item.accessRole !== 'writer')
         continue;
       if (item.selected)
         calendars.push([item.id, item.summary]);
