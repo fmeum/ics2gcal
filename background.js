@@ -337,9 +337,22 @@
     return recurrenceRuleStrings;
   }
 
+  function uuidv4() {
+    const randomBytes = new Uint8Array(16);
+    window.crypto.getRandomValues(randomBytes);
+    // Version: 4
+    randomBytes[6] = 0x40 | (randomBytes[6] & 0x0F);
+    // Variant: 1
+    randomBytes[8] = 0x80 | (randomBytes[8] & 0x3F);
+    let pos = 0;
+    return 'xxxx-xx-xx-xx-xxxxxx'.replace(/x/g,
+      () => randomBytes[pos++].toString(16).padStart(2, '0')
+    );
+  }
+
   function toGcalEvent(event, tabInfo) {
     let gcalEvent = {
-      'iCalUID': event.uid,
+      'iCalUID': event.uid || uuidv4(),
       'start': {
         'dateTime': event.startDate.toString(),
         'timeZone': event.startDate.zone.toString()
