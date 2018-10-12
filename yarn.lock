@@ -5,7 +5,9 @@
 chrome-promise@^2.0.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/chrome-promise/-/chrome-promise-2.1.2.tgz#bf3048e92a97d03085bc36c5fde18cf1178165a6"
+  integrity sha512-FJlK4wUOi6BT1txBwJJOEdOsPMRazl6FnvrcN97D1T+TRCf7+fvSTLIdKA/p17yJ4bdhZ9LpsQQc4N/Ov4jFOw==
 
 ical.js@^1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/ical.js/-/ical.js-1.2.2.tgz#59b517362a8f61dce0342fe67deb7c20dd119f6e"
+  integrity sha1-WbUXNiqPYdzgNC/mfet8IN0Rn24=
