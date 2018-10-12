@@ -10,4 +10,5 @@ cp node_modules/chrome-promise/chrome-promise.js build/node_modules/chrome-promi
 mkdir -p build/images
 cp images/*.png build/images/
 cd build
+rm ../ics2gcal.zip
 zip -r ../ics2gcal.zip *
