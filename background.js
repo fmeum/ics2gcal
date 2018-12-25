@@ -1,4 +1,4 @@
-(function() {
+(function () {
   "use strict";
 
   const chromep = new ChromePromise();
@@ -91,8 +91,8 @@
     const calendarId = info.menuItemId.split("/")[1];
     let responseText = '';
     try {
-      let response = await fetch(info.linkUrl, {credentials: 'include'}).
-          then(handleStatus);
+      let response = await fetch(info.linkUrl, {credentials: 'include'})
+          .then(handleStatus);
       responseText = await response.text();
     } catch (error) {
       showSnackbar(activeTabId, "Can't fetch iCal file.");
@@ -129,14 +129,14 @@
     await chromep.tabs.executeScript(activeTabId, {
       code: "window.onbeforeunload = e => true;"
     });
-    showSnackbar(activeTabId, importMessage, "Cancel", async function(clicked) {
+    showSnackbar(activeTabId, importMessage, "Cancel", async function (clicked) {
       // Use an asynchronous closure as replacement for RAII
-      await async function() {
+      await async function () {
         if (!clicked) {
           let eventResponses = [];
           try {
             eventResponses = await Promise.all(gcalEventsAndExDates.map(
-              async function(gcalEventAndExDates) {
+              async function (gcalEventAndExDates) {
                 let [gcalEvent, exDates] = gcalEventAndExDates;
                 let event = await importEvent(gcalEvent, calendarId);
                 await cancelExDates(calendarId, event, exDates);
@@ -289,7 +289,7 @@
 
   async function cancelExDates(calendarId, event, exDates) {
     let token = await authenticate(false);
-    await Promise.all(exDates.map(async function(exDate) {
+    await Promise.all(exDates.map(async function (exDate) {
       let instances = [];
       instances = await fetchInstancesWithOriginalStart(token,
         calendarId, event.id, exDate);
@@ -398,14 +398,14 @@
   async function importEvent(gcalEvent, calendarId) {
     let token = await authenticate(true);
     let response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
-          method: "POST",
-          headers: new Headers({
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }),
-          body: JSON.stringify(gcalEvent)
-        }).then(handleStatus);
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/import`, {
+        method: "POST",
+        headers: new Headers({
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }),
+        body: JSON.stringify(gcalEvent)
+      }).then(handleStatus);
     return response.json();
   }
 
