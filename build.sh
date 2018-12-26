@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 yarn install
 
+rm -rf build
 mkdir -p build
 cp background.js manifest.json snackbar.css snackbar.js build
 mkdir -p build/node_modules/ical.js/build
