@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-chrome-promise@^2.0.2:
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/chrome-promise/-/chrome-promise-2.1.2.tgz#bf3048e92a97d03085bc36c5fde18cf1178165a6"
-  integrity sha512-FJlK4wUOi6BT1txBwJJOEdOsPMRazl6FnvrcN97D1T+TRCf7+fvSTLIdKA/p17yJ4bdhZ9LpsQQc4N/Ov4jFOw==
+chrome-promise@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/chrome-promise/-/chrome-promise-3.0.4.tgz#6509116b246fa1b87069df2fe0bdf333153adbb5"
+  integrity sha512-kBVn78V7E6ZHz24FSEQlNBcNphICewjZPyC6D/TgGGyqou7mbOrKTS4NhGBl8RnrYLD6L7wkJ8Zz6ym2n5gZ6Q==
 
 ical.js@^1.3.0:
   version "1.3.0"

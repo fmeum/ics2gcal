@@ -8,7 +8,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "chrome-promise": "^2.0.2",
+    "chrome-promise": "^3.0.4",
     "ical.js": "^1.3.0"
   }
 }
