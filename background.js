@@ -225,8 +225,8 @@
     // In this case, we have to populate the list of calendars here.
     if (Object.keys(calendarIdToTitle).length === 0)
       await fetchCalendars(true);
-    const calendarTitle = info.menuItem;
     const calendarId = info.menuItemId.split("/")[1];
+    const calendarTitle = calendarIdToTitle[calendarId];
     let responseText = '';
     try {
       let response = await fetch(info.linkUrl, {credentials: 'include'})
@@ -255,10 +255,10 @@
       return;
     } else if (gcalEventsAndExDates.length === 1) {
       importMessage =
-        `Importing event into '${calendarIdToTitle[calendarId]}'...`;
+        `Importing event into '${calendarTitle}'...`;
     } else {
       importMessage =
-        `Importing ${gcalEventsAndExDates.length} events into '${calendarIdToTitle[calendarId]}'...`;
+        `Importing ${gcalEventsAndExDates.length} events into '${calendarTitle}'...`;
     }
     // As we implement cancelling via lazy execution, we will notify the user of
     // possible event loss if they try to leave the page while we haven't
