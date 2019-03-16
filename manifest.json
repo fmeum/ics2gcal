@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.6.1",
+  "version": "0.7.0",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {

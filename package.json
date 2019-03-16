@@ -1,6 +1,6 @@
 {
   "name": "ics2gcal",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Import .ics files into Google Calendar with just two clicks",
   "main": "background.js",
   "repository": "https://github.com/FabianHenneke/icstogcal",
