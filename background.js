@@ -208,6 +208,20 @@
       vevent => new ICAL.Event(vevent));
   }
 
+  async function fetchDefaultTimeZone(token, calendarId) {
+    let response = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}`, {
+        method: "GET",
+        headers: new Headers({
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }),
+      })
+    .then(handleStatus);
+    let responseJson = await response.json();
+    return responseJson.timeZone;
+  }
+
   async function linkMenuCalendar_onClick(info) {
     // Temporarily ignore clicks while we process one
     if (mutexLinkMenuCalendar_onClick)
@@ -238,10 +252,20 @@
       mutexLinkMenuCalendar_onClick = false;
       return;
     }
+    let defaultTimeZone = '';
+    try {
+      let token = await authenticate(false);
+      defaultTimeZone = await fetchDefaultTimeZone(token, calendarId);
+    } catch (error) {
+      showSnackbar(activeTabId, "Can't fetch calendar's default time zone.");
+      console.log(error);
+      mutexLinkMenuCalendar_onClick = false;
+      return;
+    }
     let gcalEventsAndExDates = [];
     try {
       gcalEventsAndExDates = parseIcs(responseText).map(
-        event => toGcalEvent(event, activeTab));
+        event => toGcalEvent(event, activeTab, defaultTimeZone));
     } catch (error) {
       showSnackbar(activeTabId, "The iCal file has an invalid format.");
       console.log(error);
@@ -488,23 +512,26 @@
     );
   }
 
-  function normalizeTimezone(tz) {
-    if (WINDOWS_TO_IANA_TIMEZONES.hasOwnProperty(tz)) {
-      return WINDOWS_TO_IANA_TIMEZONES[tz];
+  function normalizeTimezone(timeZone, defaultTimeZone) {
+    if (timeZone == 'floating') {
+      return defaultTimeZone;
     }
-    return tz;
+    if (WINDOWS_TO_IANA_TIMEZONES.hasOwnProperty(timeZone)) {
+      return WINDOWS_TO_IANA_TIMEZONES[timeZone];
+    }
+    return timeZone;
   }
 
-  function toGcalEvent(event, tabInfo) {
+  function toGcalEvent(event, tabInfo, defaultTimeZone) {
     let gcalEvent = {
       'iCalUID': event.uid || uuidv4(),
       'start': {
         'dateTime': event.startDate.toString(),
-        'timeZone': normalizeTimezone(event.startDate.zone.toString())
+        'timeZone': normalizeTimezone(event.startDate.zone.toString(), defaultTimeZone)
       },
       'end': {
         'dateTime': event.endDate.toString(),
-        'timeZone': normalizeTimezone(event.endDate.zone.toString())
+        'timeZone': normalizeTimezone(event.endDate.zone.toString(), defaultTimeZone)
       },
       'description': '',
       'reminders': {
