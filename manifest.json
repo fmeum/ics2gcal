@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.7.0",
+  "version": "0.7.1",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {
@@ -36,7 +36,8 @@
   "oauth2": {
     "client_id": "284525147469-lns92r5f57ppmd7ht8m311tuc7jsog2s.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/calendar"
+      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/calendar.events"
     ]
   }
 }
