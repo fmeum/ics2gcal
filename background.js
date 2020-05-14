@@ -163,13 +163,7 @@
   }
 
   async function injectSnackbar(tab) {
-    let robotoResponse = await fetch(
-      'https://fonts.googleapis.com/css?family=Roboto:400,500');
-    let robotoCode = await robotoResponse.text();
     // Load styles first to prevent flashes
-    await chromep.tabs.insertCSS(tab, {
-      code: robotoCode
-    });
     await chromep.tabs.insertCSS(tab, {
       file: "snackbar.css"
     });

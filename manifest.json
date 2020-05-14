@@ -27,10 +27,10 @@
     ]
   },
   "permissions": [
+    "activeTab",
     "contextMenus",
     "identity",
-    "tabs",
-    "https://www.googleapis.com/*",
+    "https://www.googleapis.com/calendar/v3/*",
     "<all_urls>"
   ],
   "oauth2": {
