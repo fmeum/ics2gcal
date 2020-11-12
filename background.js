@@ -192,6 +192,8 @@
     // https://regex101.com/r/5tWWwt/1
     const EMPTY_PROPERTY_PATTERN = /^(RDATE|EXDATE):$/gm;
     icsContent = icsContent.replace(EMPTY_PROPERTY_PATTERN, '');
+    // ICAL 1.4.0 offers to make the parser more lenient.
+    ICAL.design.strict = false;
     let icalData = ICAL.parse(icsContent);
     let icalRoot = new ICAL.Component(icalData);
     // ical.js does not automatically populate its TimezoneService with
