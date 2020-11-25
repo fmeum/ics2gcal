@@ -601,8 +601,11 @@
     let responseCalendarList = null;
     try {
       let response = await fetch(
-          `https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`, {
-            method: "GET"
+          `https://www.googleapis.com/calendar/v3/users/me/calendarList`, {
+            method: "GET",
+            headers: new Headers({
+              "Authorization": `Bearer ${token}`,
+            }),
           })
         .then(handleStatus);
       responseCalendarList = await response.json();
