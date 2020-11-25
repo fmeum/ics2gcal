@@ -154,10 +154,17 @@
   let calendarIdToTitle = {};
   let mutexLinkMenuCalendar_onClick = false;
 
-  function handleStatus(response) {
+  async function handleStatus(response, token) {
     if (response.status >= 200 && response.status < 300) {
       return Promise.resolve(response);
     } else {
+      if (response.status == 401) {
+        // The token has become invalid, revoke it.
+        await chromep.identity.removeCachedAuthToken({
+          token
+        });
+        await authenticate(true);
+      }
       return Promise.reject(new Error(response.statusText));
     }
   }
@@ -206,14 +213,14 @@
 
   async function fetchDefaultTimeZone(token, calendarId) {
     let response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}`, {
-        method: "GET",
-        headers: new Headers({
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }),
-      })
-    .then(handleStatus);
+        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}`, {
+          method: "GET",
+          headers: new Headers({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }),
+        })
+      .then(response => handleStatus(response, token));
     let responseJson = await response.json();
     return responseJson.timeZone;
   }
@@ -239,8 +246,10 @@
     const calendarTitle = calendarIdToTitle[calendarId];
     let responseText = '';
     try {
-      let response = await fetch(info.linkUrl, {credentials: 'include'})
-          .then(handleStatus);
+      let response = await fetch(info.linkUrl, {
+          credentials: 'include'
+        })
+        .then(handleStatus);
       responseText = await response.text();
     } catch (error) {
       showSnackbar(activeTabId, "Can't fetch iCal file.");
@@ -368,18 +377,19 @@
     }
   }
 
-  function authenticate(interactive) {
+  async function authenticate(interactive) {
     let token = '';
     try {
-      token = chromep.identity.getAuthToken({
+      // Strip the scopes.
+      [token] = await chromep.identity.getAuthToken({
         interactive
       });
     } catch (error) {
-      updateBrowserAction(false);
+      await updateBrowserAction(false);
       throw error;
     }
     if (interactive)
-      updateBrowserAction(true);
+      await updateBrowserAction(true);
     return token;
   }
 
@@ -394,7 +404,7 @@
             "Authorization": `Bearer ${token}`
           }),
         })
-      .then(handleStatus);
+      .then(response => handleStatus(response, token));
     let responseJson = await response.json();
     return responseJson.items;
   }
@@ -427,7 +437,7 @@
             "Authorization": `Bearer ${token}`
           }),
         })
-      .then(handleStatus);
+      .then(response => handleStatus(response, token));
     let responseJson = await response.json();
     return responseJson.items;
   }
@@ -442,7 +452,7 @@
           }),
           body: JSON.stringify(instance),
         })
-      .then(handleStatus);
+      .then(response => handleStatus(response, token));
   }
 
   async function cancelExDates(calendarId, event, exDates) {
@@ -460,7 +470,7 @@
         // exDate's time is off and this instance should be cancelled. This
         // appears to be Outlook's standard behavior.
         let startDay = exDate.clone();
-        startDay.adjust(/* d */0, -exDate.hour, -exDate.minute, -exDate.second);
+        startDay.adjust( /* d */ 0, -exDate.hour, -exDate.minute, -exDate.second);
         let endDay = startDay.clone();
         endDay.adjust(1, 0, 0, 0);
         instances = await fetchInstancesWithinBounds(token, calendarId, event,
@@ -573,24 +583,24 @@
           "Authorization": `Bearer ${token}`
         }),
         body: JSON.stringify(gcalEvent)
-      }).then(handleStatus);
+      }).then(response => handleStatus(response, token));
     return response.json();
   }
 
-  function updateBrowserAction(active) {
+  async function updateBrowserAction(active) {
     if (active) {
-      chrome.browserAction.setTitle({
-        title: "Update calendar list"
-      });
-      chrome.browserAction.setIcon({
+      await chromep.browserAction.setIcon({
         path: "images/logo_active.png"
       });
-    } else {
-      chrome.browserAction.setTitle({
-        title: "Authorize"
+      await chromep.browserAction.setTitle({
+        title: "Update calendar list"
       });
-      chrome.browserAction.setIcon({
+    } else {
+      await chromep.browserAction.setIcon({
         path: "images/logo_inactive.png"
+      });
+      await chromep.browserAction.setTitle({
+        title: "Authorize"
       });
     }
   }
@@ -607,15 +617,15 @@
               "Authorization": `Bearer ${token}`,
             }),
           })
-        .then(handleStatus);
+        .then(response => handleStatus(response, token));
       responseCalendarList = await response.json();
     } catch (error) {
       console.log("Failed to fetch calendars.");
       console.log(error);
-      updateBrowserAction(false);
+      await updateBrowserAction(false);
       return;
     }
-    updateBrowserAction(true);
+    await updateBrowserAction(true);
     let calendars = [];
     let hiddenCalendars = [];
     for (let item of responseCalendarList.items) {
