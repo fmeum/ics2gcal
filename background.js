@@ -1,8 +1,6 @@
-(function () {
-  "use strict";
-
-  const chromep = new ChromePromise();
-
+import * as ICAL from 'ical.js';
+import UUID from 'pure-uuid'; 
+ (function () {
   const LINK_MENU_ID = "ics2gcal.contextmenu.link";
   const LINK_MENU_SEPARATOR_ID = "ics2gcal.contextmenu.separator";
   const LINK_MENU_CALENDAR_ID_PREFIX = "ics2gcal.contextmenu.link.calendar/";
@@ -160,7 +158,7 @@
     } else {
       if (response.status == 401) {
         // The token has become invalid, revoke it.
-        await chromep.identity.removeCachedAuthToken({
+        await chrome.identity.removeCachedAuthToken({
           token
         });
         await authenticate(true);
@@ -171,16 +169,18 @@
 
   async function injectSnackbar(tab) {
     // Load styles first to prevent flashes
-    await chromep.tabs.insertCSS(tab, {
-      file: "snackbar.css"
+    await chrome.scripting.insertCSS({
+      target: {tabId: tab.id},
+      files: ["snackbar.css"]
     });
-    await chromep.tabs.executeScript(tab, {
-      file: "snackbar.js"
+    await chrome.scripting.executeScript({
+      target: {tabId: tab.id},
+      files: ["snackbar.js"]
     });
   }
 
-  function showSnackbar(tab, text, action_label, callback) {
-    chrome.tabs.sendMessage(tab, {
+  function showSnackbar(tabId, text, action_label, callback) {
+    chrome.tabs.sendMessage(tabId, {
         text,
         action_label
       },
@@ -230,13 +230,11 @@
     if (mutexLinkMenuCalendar_onClick)
       return;
     mutexLinkMenuCalendar_onClick = true;
-    let tabs = await chromep.tabs.query({
-      active: true,
-      currentWindow: true
+    const [activeTab] = await chrome.tabs.query({ 
+      active: true, lastFocusedWindow: true
     });
-    const activeTab = tabs[0];
     const activeTabId = activeTab.id;
-    await injectSnackbar(activeTabId);
+    await injectSnackbar(activeTab);
     // If the user disables and then re-enables the app, the context menus will
     // show up magically without installContextMenus ever having been called.
     // In this case, we have to populate the list of calendars here.
@@ -289,13 +287,7 @@
       importMessage =
         `Importing ${gcalEventsAndExDates.length} events into '${calendarTitle}'...`;
     }
-    // As we implement cancelling via lazy execution, we will notify the user of
-    // possible event loss if they try to leave the page while we haven't
-    // committed.
-    window.addEventListener('onbeforeunload', e => true);
-    await chromep.tabs.executeScript(activeTabId, {
-      code: "window.onbeforeunload = e => true;"
-    });
+
     showSnackbar(activeTabId, importMessage, "Cancel", async function (clicked) {
       // Use an asynchronous closure as replacement for RAII
       await async function () {
@@ -324,21 +316,25 @@
             showSnackbar(activeTabId,
               `Event imported into '${calendarIdToTitle[calendarId]}'.`,
               "View",
-              clicked => clicked ? window.open(eventResponses[0].htmlLink,
-                "_blank") : {});
+              clicked => clicked ? chrome.tabs.create({
+                active: true, 
+                openerTabId: activeTabId, 
+                url: eventResponses[0].htmlLink
+              }) : {});
           } else {
             showSnackbar(activeTabId,
               `${eventResponses.length} events imported into '${calendarIdToTitle[calendarId]}'.`,
               "View all",
               clicked => clicked ? eventResponses.forEach(response =>
-                window.open(response.htmlLink, "_blank")) : {});
+                chrome.tabs.create({
+                  active: true, 
+                  openerTabId: activeTabId, 
+                  url: response.htmlLink
+                })) : {});
           }
         }
       }();
       mutexLinkMenuCalendar_onClick = false;
-      await chromep.tabs.executeScript(activeTabId, {
-        code: "window.onbeforeunload = e => null;"
-      });
     });
   }
 
@@ -377,18 +373,19 @@
     }
   }
 
-  async function authenticate(interactive) {
+  async function authenticate(isInteractive) {
     let token = '';
     try {
       // Strip the scopes.
-      [token] = await chromep.identity.getAuthToken({
-        interactive
+      const response = await chrome.identity.getAuthToken({
+        interactive: isInteractive
       });
+      token = response.token;
     } catch (error) {
       await updateBrowserAction(false);
       throw error;
     }
-    if (interactive)
+    if (isInteractive)
       await updateBrowserAction(true);
     return token;
   }
@@ -505,19 +502,6 @@
     return recurrenceRuleStrings;
   }
 
-  function uuidv4() {
-    const randomBytes = new Uint8Array(16);
-    window.crypto.getRandomValues(randomBytes);
-    // Version: 4
-    randomBytes[6] = 0x40 | (randomBytes[6] & 0x0F);
-    // Variant: 1
-    randomBytes[8] = 0x80 | (randomBytes[8] & 0x3F);
-    let pos = 0;
-    return 'xxxx-xx-xx-xx-xxxxxx'.replace(/x/g,
-      () => randomBytes[pos++].toString(16).padStart(2, '0')
-    );
-  }
-
   function normalizeTimezone(timeZone, defaultTimeZone) {
     if (timeZone == 'floating') {
       return defaultTimeZone;
@@ -530,7 +514,7 @@
 
   function toGcalEvent(event, tabInfo, defaultTimeZone) {
     let gcalEvent = {
-      'iCalUID': event.uid || uuidv4(),
+      'iCalUID': event.uid || new UUID(4),
       'start': {
         'dateTime': event.startDate.toString(),
         'timeZone': normalizeTimezone(event.startDate.zone.toString(), defaultTimeZone)
@@ -589,25 +573,28 @@
 
   async function updateBrowserAction(active) {
     if (active) {
-      await chromep.browserAction.setIcon({
+      await chrome.action.setIcon({
         path: "images/logo_active.png"
       });
-      await chromep.browserAction.setTitle({
+      await chrome.action.setTitle({
         title: "Update calendar list"
       });
     } else {
-      await chromep.browserAction.setIcon({
+      await chrome.action.setIcon({
         path: "images/logo_inactive.png"
       });
-      await chromep.browserAction.setTitle({
-        title: "Authorize"
+      await chrome.action.setTitle({
+        title: "Authorize ICS to GCal to access (read/write) your Google Calendar"
       });
     }
   }
 
   async function fetchCalendars(interactive) {
-    await chromep.contextMenus.removeAll();
+    chrome.contextMenus.removeAll();
     let token = await authenticate(interactive);
+    if(token === '') {
+      await updateBrowserAction(false);
+    }
     let responseCalendarList = null;
     try {
       let response = await fetch(
@@ -642,6 +629,7 @@
 
   chrome.runtime.onInstalled.addListener(fetchCalendars.bind(null, false));
   chrome.runtime.onStartup.addListener(fetchCalendars.bind(null, false));
-  chrome.browserAction.onClicked.addListener(fetchCalendars.bind(null, true));
+  chrome.action.onClicked.addListener(fetchCalendars.bind(null, true));
   chrome.contextMenus.onClicked.addListener(linkMenuCalendar_onClick);
 })();
+ 

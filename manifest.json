@@ -1,8 +1,8 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.9.1",
+  "version": "0.9.2",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {
@@ -12,24 +12,23 @@
   "author": "Fabian Henneke",
   "homepage_url": "https://github.com/FabianHenneke/ics2gcal",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgOOWm/6fFzxL5P6zwlMPfJD+W7qdzXBmW50TvqN3BrZH3/9wcoc6q2vqnhqGmIrl1T/lHlRsN1yt3jKXzyYFRwg+kcvWZPFcerRmTGKcFeFb2nMZ/2UzwrmojhE1IBnNohfqrmyFvGYnIR85dwePXrP+KKJI4kBzh9bdqpQmPOYhQGDSP6qOvl9Q6jqsWMXGI8pYAuMMmPidx0tu/mEJA82LSZoGUMP8i7sx40FM09ztM2oSLxpD9JSprV9YqJG5xXUk6O2bHBoGwoC65UEC/xkwgsTSaaCI0Te0FemIl/pblishPvPX1mwHPkLH8AXT1DcDVmMyEhXW8eZjjXAENQIDAQAB",
-  "browser_action": {
-    "default_title": "Authorize",
-    "default_icon": {
+  "action": {
+    "default_title": "Authorize ICS to GCal to access (read/write) your Google Calendar",
+      "default_icon": {
       "128": "images/logo_inactive.png"
     }
   },
   "background": {
-    "persistent": false,
-    "scripts": [
-      "node_modules/ical.js/build/ical.min.js",
-      "node_modules/chrome-promise/chrome-promise.js",
-      "background.js"
-    ]
+    "service_worker": "background.js",
+     "type":"module"
   },
   "permissions": [
     "activeTab",
     "contextMenus",
-    "identity",
+    "identity", 
+    "scripting"
+  ],
+  "host_permissions":[
     "https://www.googleapis.com/calendar/v3/*",
     "<all_urls>"
   ],
@@ -37,7 +36,31 @@
     "client_id": "284525147469-lns92r5f57ppmd7ht8m311tuc7jsog2s.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/calendar.readonly",
-      "https://www.googleapis.com/auth/calendar.events"
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar"
     ]
-  }
+  },
+    "content_scripts": [
+      {
+        "js": [
+        "snackbar.js"],
+        "matches": [
+          "*://*/*"
+        ]
+      }
+    ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*",
+        "images/*",
+        "snackbar.js",
+                "snackbar.css"
+        
+      ],
+      "matches": [
+        "*://*/*"
+      ]
+    }
+  ]
 }
