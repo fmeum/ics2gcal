@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
-  "version": "0.9.2",
+  "version": "1.0.0",
 
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {
@@ -55,8 +55,7 @@
         "assets/*",
         "images/*",
         "snackbar.js",
-                "snackbar.css"
-        
+         "snackbar.css"
       ],
       "matches": [
         "*://*/*"
