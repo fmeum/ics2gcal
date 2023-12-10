@@ -3,32 +3,30 @@
   "name": "ICS to GCal",
   "short_name": "ICS2GCal",
   "version": "1.0.0",
-
   "description": "Import .ics files into Google Calendar with just two clicks",
   "icons": {
     "128": "images/logo_active.png"
   },
-
   "author": "Fabian Henneke",
   "homepage_url": "https://github.com/FabianHenneke/ics2gcal",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgOOWm/6fFzxL5P6zwlMPfJD+W7qdzXBmW50TvqN3BrZH3/9wcoc6q2vqnhqGmIrl1T/lHlRsN1yt3jKXzyYFRwg+kcvWZPFcerRmTGKcFeFb2nMZ/2UzwrmojhE1IBnNohfqrmyFvGYnIR85dwePXrP+KKJI4kBzh9bdqpQmPOYhQGDSP6qOvl9Q6jqsWMXGI8pYAuMMmPidx0tu/mEJA82LSZoGUMP8i7sx40FM09ztM2oSLxpD9JSprV9YqJG5xXUk6O2bHBoGwoC65UEC/xkwgsTSaaCI0Te0FemIl/pblishPvPX1mwHPkLH8AXT1DcDVmMyEhXW8eZjjXAENQIDAQAB",
   "action": {
     "default_title": "Authorize ICS to GCal to access (read/write) your Google Calendar",
-      "default_icon": {
+    "default_icon": {
       "128": "images/logo_inactive.png"
     }
   },
   "background": {
     "service_worker": "background.js",
-     "type":"module"
+    "type": "module"
   },
   "permissions": [
     "activeTab",
     "contextMenus",
-    "identity", 
+    "identity",
     "scripting"
   ],
-  "host_permissions":[
+  "host_permissions": [
     "https://www.googleapis.com/calendar/v3/*",
     "<all_urls>"
   ],
@@ -40,22 +38,23 @@
       "https://www.googleapis.com/auth/calendar"
     ]
   },
-    "content_scripts": [
-      {
-        "js": [
-        "snackbar.js"],
-        "matches": [
-          "*://*/*"
-        ]
-      }
-    ],
+  "content_scripts": [
+    {
+      "js": [
+        "snackbar.js"
+      ],
+      "matches": [
+        "*://*/*"
+      ]
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": [
         "assets/*",
         "images/*",
         "snackbar.js",
-         "snackbar.css"
+        "snackbar.css"
       ],
       "matches": [
         "*://*/*"
