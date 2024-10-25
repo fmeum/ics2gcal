@@ -18,7 +18,7 @@ A popup notification will inform you about the number of events added and allow 
 You can install the extension directly from the [Chrome Web Store](https://chrome.google.com/webstore/detail/ics-to-gcal/ljobcbehhifehkmamikmchekbbljopao). If you want to make changes to the extension and test it locally, you have to:
 
 1. Run `yarn install` to install dependencies ([ical.js](https://github.com/mozilla-comm/ical.js/) and [pure-uuid](https://github.com/rse/pure-uuid)).
-2. Run `yarn run build` to resolve development dependencies (due to changes in Chrome Manifest 3, libraries using CommonJS were the easiest way to restore functionality).
+2. Run `yarn run build` to resolve development dependencies.
 3. In Chrome, under `More tools -> Extensions`, mark the `Developer mode` checkbox and use `Load unpacked extension...`.
 4. Select the build directory.
 
