@@ -14,6 +14,7 @@
   let snackbar = document.getElementById(SNACKBAR_ID);
   if (!snackbar) {
     snackbar = document.createElement("div");
+    snackbar.hidden = true;
     snackbar.id = SNACKBAR_ID;
     snackbar.innerHTML =
       `<span id="${SNACKBAR_TEXT_ID}"></span>
@@ -44,6 +45,7 @@
     let showSnackbar = function() {
       snackbar_text.innerText = text;
       if (action_label) {
+        snackbar.hidden = false;
         snackbar_action.innerText = action_label;
         snackbar_action.style.display = "initial";
         snackbar_action.onclick = function() {
@@ -53,6 +55,7 @@
           hideSnackbarNoTransition();
         };
       } else {
+        snackbar.hidden = true;
         snackbar_action.style.display = "none";
       }
       snackbar.classList.add("show");
