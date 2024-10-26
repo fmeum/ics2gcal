@@ -163,7 +163,7 @@ import UUID from 'pure-uuid';
         });
         await authenticate(true);
       }
-      return Promise.reject(new Error(response.statusText));
+      return Promise.reject(new Error(await response.text()));
     }
   }
 
@@ -295,8 +295,8 @@ import UUID from 'pure-uuid';
       await chrome.scripting.executeScript({
         target: {tabId: activeTabId},
         function: () => {
-          document.addEventListener('DOMContentLoaded', function() { 
-            window.onbeforeunload = function() { return true; }; 
+          document.addEventListener('DOMContentLoaded', function() {
+            window.onbeforeunload = function() { return true; };
           });
         },
       });
