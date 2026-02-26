@@ -19,7 +19,7 @@
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@types/chrome": "^0.0.279",
-    "rollup": "^4.24.0",
+    "rollup": "^4.59.0",
     "rollup-plugin-chrome-extension": "^3.6.12",
     "rollup-plugin-zip": "^1.0.3"
   },
